@@ -1,23 +1,29 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getDashboardStats() {
+  async getDashboard() {
+    const totalUsers = await this.prisma.user.count();
     const totalStudents = await this.prisma.user.count({
-      where: { role: "STUDENT" },
+      where: { role: 'STUDENT' },
     });
-
+    const totalAdmins = await this.prisma.user.count({
+      where: { role: 'ADMIN' },
+    });
+    const totalCategories = await this.prisma.category.count();
+    const totalLessons = await this.prisma.lesson.count();
     const totalQuestions = await this.prisma.question.count();
 
-    const totalSimulados = await this.prisma.phase.count();
-
     return {
-      totalStudents,
-      totalQuestions,
-      totalSimulados,
+      users: totalUsers,
+      students: totalStudents,
+      admins: totalAdmins,
+      categories: totalCategories,
+      lessons: totalLessons,
+      questions: totalQuestions,
     };
   }
 }

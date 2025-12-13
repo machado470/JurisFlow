@@ -1,67 +1,44 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from 'react-router-dom';
 
-import Login from "../modules/auth/Login";
-import StudentHome from "../modules/student/Home";
-import StudentDashboard from "../modules/student/Dashboard";
-import Simulado from "../modules/student/Simulado";
-import ResultadoSimulado from "../modules/student/ResultadoSimulado";
-import Ranking from "../modules/student/Ranking";
+import Login from '../pages/Login';
+import Dashboard from '../pages/Dashboard';
+import AdminDashboard from '../modules/admin/AdminDashboard';
+import { RequireAdmin } from './RequireAdmin';
+import AppLayout from '../layouts/AppLayout';
 
-import RequireAuth from "./RequireAuth";
-
-export default function AppRouter() {
+export default function Router() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
+    <Routes>
+      {/* inicial */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route
-          path="/aluno/home"
-          element={
-            <RequireAuth>
-              <StudentHome />
-            </RequireAuth>
-          }
-        />
+      {/* pública */}
+      <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/aluno/dashboard"
-          element={
-            <RequireAuth>
-              <StudentDashboard />
-            </RequireAuth>
-          }
-        />
+      {/* aluno */}
+      <Route
+        path="/dashboard"
+        element={
+          <AppLayout>
+            <Dashboard />
+          </AppLayout>
+        }
+      />
 
-        <Route
-          path="/aluno/simulado"
-          element={
-            <RequireAuth>
-              <Simulado />
-            </RequireAuth>
-          }
-        />
+      {/* admin */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAdmin>
+            <AppLayout>
+              <AdminDashboard />
+            </AppLayout>
+          </RequireAdmin>
+        }
+      />
 
-        <Route
-          path="/aluno/simulado/resultado"
-          element={
-            <RequireAuth>
-              <ResultadoSimulado />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/aluno/ranking"
-          element={
-            <RequireAuth>
-              <Ranking />
-            </RequireAuth>
-          }
-        />
-
-        <Route path="*" element={<Login />} />
-      </Routes>
-    </BrowserRouter>
+      {/* fallback */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }

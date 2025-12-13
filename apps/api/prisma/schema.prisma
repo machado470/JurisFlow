@@ -11,16 +11,14 @@ model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
-  passwordHash String
-
-  role      Role
-  createdAt DateTime @default(now())
+  passwordHash String?
+  isActive     Boolean  @default(false)
+  role         Role
+  createdAt    DateTime @default(now())
 
   studentProgress StudentProgress[]
   studentLessons  StudentLesson[]
   simulations     Simulation[]
-
-  // Apenas UMA relação com SimuladoAttempt → OK
   attempts        SimuladoAttempt[] @relation("UserAttempts")
 }
 
@@ -33,7 +31,7 @@ model Category {
 }
 
 model Phase {
-  id         String  @id @default(uuid())
+  id         String @id @default(uuid())
   name       String
   order      Int
   categoryId String
@@ -45,13 +43,12 @@ model Phase {
 }
 
 model Lesson {
-  id       String @id @default(uuid())
-  title    String
-  order    Int
-  content  String
-  imageUrl String?
-  videoUrl String?
-
+  id         String @id @default(uuid())
+  title      String
+  order      Int
+  content    String
+  imageUrl   String?
+  videoUrl   String?
   categoryId String
   phaseId    String
 
@@ -77,9 +74,9 @@ model StudentProgress {
   id               String   @id @default(uuid())
   userId           String
   phaseId          String
-  lessonsCompleted Int
-  correctAnswers   Int
-  finished         Boolean @default(false)
+  lessonsCompleted Int      @default(0)
+  correctAnswers   Int      @default(0)
+  finished         Boolean  @default(false)
 
   user  User  @relation(fields: [userId], references: [id])
   phase Phase @relation(fields: [phaseId], references: [id])
@@ -106,23 +103,24 @@ model SimuladoAttempt {
 }
 
 model Simulation {
-  id        String              @id @default(cuid())
-  userId    String
-  user      User                @relation(fields: [userId], references: [id])
-  startedAt DateTime            @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  startedAt  DateTime @default(now())
   finishedAt DateTime?
-  answers   SimulationAnswer[]
+
+  user    User               @relation(fields: [userId], references: [id])
+  answers SimulationAnswer[]
 }
 
 model SimulationAnswer {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   simulationId String
   questionId   String
   selected     String
   correct      Boolean
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime @default(now())
 
-  simulation   Simulation @relation(fields: [simulationId], references: [id])
+  simulation Simulation @relation(fields: [simulationId], references: [id])
 }
 
 enum Role {

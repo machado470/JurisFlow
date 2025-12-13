@@ -1,19 +1,27 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
-    private jwt: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
   ) {}
 
   async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
     if (!user) return null;
+    if (!user.passwordHash) return null;
 
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) return null;
@@ -25,7 +33,11 @@ export class AuthService {
     const user = await this.validateUser(email, password);
 
     if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throw new UnauthorizedException('Email ou senha inválidos');
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException('Conta ainda não ativada');
     }
 
     const payload = {
@@ -34,12 +46,11 @@ export class AuthService {
       email: user.email,
     };
 
-    const access_token = this.jwt.sign(payload);
-
     return {
-      access_token,
+      access_token: this.jwt.sign(payload),
       user: {
         id: user.id,
+        name: user.name,
         email: user.email,
         role: user.role,
       },
@@ -57,15 +68,38 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    const user = await this.prisma.user.create({
+    return this.prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
         passwordHash,
         role: 'STUDENT',
+        isActive: true,
       },
     });
+  }
 
-    return user;
+  async activateAccount(email: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuário não encontrado');
+    }
+
+    if (user.isActive) {
+      throw new ForbiddenException('Conta já ativada');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    return this.prisma.user.update({
+      where: { email },
+      data: {
+        passwordHash,
+        isActive: true,
+      },
+    });
   }
 }

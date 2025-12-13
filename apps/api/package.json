@@ -9,12 +9,10 @@
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
-
     "prisma:generate": "prisma generate --schema ./prisma/schema.prisma",
     "prisma:push": "prisma db push --schema ./prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema ./prisma/schema.prisma",
     "prisma:seed": "prisma db seed",
-
     "import:questions": "tsx scripts/import-questions.ts",
     "import:lessons": "tsx scripts/import-lessons.ts",
     "seed:auto": "tsx scripts/seed-auto.ts",
@@ -31,7 +29,6 @@
     "@nestjs/platform-express": "11.1.6",
     "@prisma/client": "5.22.0",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
@@ -47,7 +44,6 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
     "@nestjs/swagger": "^11.2.1",
-    "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",

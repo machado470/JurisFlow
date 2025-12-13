@@ -1,39 +1,47 @@
-import Layout from "../../components/Layout";
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
+
+type DashboardData = {
+  users: number;
+  students: number;
+  admins: number;
+  categories: number;
+  lessons: number;
+  questions: number;
+};
 
 export default function AdminDashboard() {
+  const { token } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    axios
+      .get('http://localhost:3001/admin/dashboard', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(res => setData(res.data))
+      .catch(err => console.error(err));
+  }, [token]);
+
+  if (!data) {
+    return <div>Carregando dashboard...</div>;
+  }
+
   return (
-    <Layout>
-      <h1 className="text-3xl font-bold mb-6">
-        Painel do Administrador
-      </h1>
+    <div style={{ padding: 24 }}>
+      <h1>Dashboard Admin</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <div className="p-6 rounded-xl bg-white dark:bg-[#161B22] shadow">
-          <h2 className="text-lg font-semibold">Alunos Cadastrados</h2>
-          <p className="text-3xl mt-2 font-bold">—</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Em breve: integração com backend
-          </p>
-        </div>
-
-        <div className="p-6 rounded-xl bg-white dark:bg-[#161B22] shadow">
-          <h2 className="text-lg font-semibold">Simulações Realizadas</h2>
-          <p className="text-3xl mt-2 font-bold">—</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Em breve: métricas automáticas
-          </p>
-        </div>
-
-        <div className="p-6 rounded-xl bg-white dark:bg-[#161B22] shadow">
-          <h2 className="text-lg font-semibold">Progresso Global</h2>
-          <p className="text-3xl mt-2 font-bold">—%</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Evolução geral dos alunos
-          </p>
-        </div>
-
-      </div>
-    </Layout>
+      <ul>
+        <li>Usuários: {data.users}</li>
+        <li>Alunos: {data.students}</li>
+        <li>Admins: {data.admins}</li>
+        <li>Categorias: {data.categories}</li>
+        <li>Lições: {data.lessons}</li>
+        <li>Questões: {data.questions}</li>
+      </ul>
+    </div>
   );
 }

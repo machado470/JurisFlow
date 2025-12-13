@@ -1,32 +1,23 @@
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Iniciando seed...");
+  console.log('🌱 Seeding database...');
 
-  // Criar ALUNO
-  await prisma.user.create({
-    data: {
-      name: "Aluno Teste",
-      email: "aluno@autoescola.com",
-      passwordHash: await bcrypt.hash("123456", 10),
-      role: "STUDENT",
+  await prisma.user.upsert({
+    where: { email: 'admin@autoescola.com' },
+    update: {},
+    create: {
+      name: 'Admin',
+      email: 'admin@autoescola.com',
+      passwordHash: 'admin123',
+      role: Role.ADMIN,
+      isActive: true,
     },
   });
 
-  // Criar ADMIN
-  await prisma.user.create({
-    data: {
-      name: "Administrador",
-      email: "admin@autoescola.com",
-      passwordHash: await bcrypt.hash("admin123", 10),
-      role: "ADMIN",
-    },
-  });
-
-  console.log("🌱 Seed finalizado com sucesso!");
+  console.log('✅ Seed finalizado');
 }
 
 main()

@@ -1,38 +1,24 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  const email = 'admin@autoescola.com';
-  const password = '123456';
+async function createAdmin() {
+  const passwordHash = await bcrypt.hash('123456', 10);
 
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const admin = await prisma.user.upsert({
-    where: { email },
+  await prisma.user.upsert({
+    where: { email: 'admin@autoescola.com' },
     update: {},
     create: {
-      name: 'Administrador',
-      email,
+      name: 'Admin',
+      email: 'admin@autoescola.com',
       passwordHash,
       role: 'ADMIN',
+      isActive: true,
     },
-  });
-
-  console.log('✅ Admin criado/atualizado com sucesso');
-  console.log({
-    id: admin.id,
-    email: admin.email,
-    role: admin.role,
   });
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Erro ao criar admin:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+createAdmin()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());
