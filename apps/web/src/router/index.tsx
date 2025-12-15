@@ -1,24 +1,20 @@
-import { Routes, Route } from 'react-router-dom'
-import AppLayout from '../layouts/AppLayout'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import AdminDashboard from '../modules/admin/AdminDashboard'
 import ExecutiveDashboard from '../modules/admin/ExecutiveDashboard'
-
-function Home() {
-  return <div className="text-white">Home pública</div>
-}
+import RiskReport from '../modules/admin/RiskReport'
+import PersonDetail from '../modules/admin/PersonDetail'
 
 export default function Router() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/admin" element={<AdminDashboard />}>
+        <Route index element={<Navigate to="executive" />} />
+        <Route path="executive" element={<ExecutiveDashboard />} />
+        <Route path="risk" element={<RiskReport />} />
+        <Route path="people/:personId" element={<PersonDetail />} />
+      </Route>
 
-      <Route
-        path="/admin"
-        element={
-          <AppLayout>
-            <ExecutiveDashboard />
-          </AppLayout>
-        }
-      />
+      <Route path="*" element={<Navigate to="/admin" />} />
     </Routes>
   )
 }

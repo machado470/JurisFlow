@@ -1,6 +1,4 @@
-import type { Config } from 'tailwindcss'
-
-export default {
+module.exports = {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
@@ -9,4 +7,4 @@ export default {
     extend: {},
   },
   plugins: [],
-} satisfies Config
+}

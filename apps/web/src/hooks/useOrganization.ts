@@ -1,20 +1,22 @@
-import { Organization } from '../types/org'
+export type Organization = {
+  id: string
+  name: string
+}
 
-const STORAGE_KEY = 'jurisflow:org'
-
-export function useOrganization() {
+export default function useOrganization() {
   function get(): Organization | null {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    try {
+      const raw = localStorage.getItem('org')
+      if (!raw) return null
+      return JSON.parse(raw)
+    } catch {
+      return null
+    }
   }
 
   function set(org: Organization) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(org))
+    localStorage.setItem('org', JSON.stringify(org))
   }
 
-  function clear() {
-    localStorage.removeItem(STORAGE_KEY)
-  }
-
-  return { get, set, clear }
+  return { get, set }
 }

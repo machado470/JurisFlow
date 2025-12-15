@@ -1,53 +1,59 @@
-import { useAudit } from '../../hooks/useAudit'
-import { useTracks } from '../../hooks/useTracks'
+import { useEffect, useState } from 'react'
+import api from '../../services/api'
+
+type AuditEvent = {
+  id: string
+  entity: string
+  entityId: string
+  action: string
+  createdAt: string
+  meta?: any
+}
 
 export default function AuditLog() {
-  const { list } = useAudit()
-  const { list: listTracks } = useTracks()
+  const [logs, setLogs] = useState<AuditEvent[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const events = list()
-  const tracks = listTracks()
-
-  function trackName(trackId: string) {
-    return tracks.find(t => t.id === trackId)?.title ?? trackId
-  }
+  useEffect(() => {
+    api.get('/audit')
+      .then(res => setLogs(res.data))
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
-    <div>
-      <h2 style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>
-        Auditoria de Atividades
-      </h2>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Auditoria do Sistema</h1>
 
-      {events.length === 0 && (
-        <p style={{ color: '#555' }}>
-          Nenhum evento registrado.
-        </p>
+      {loading && (
+        <div className="text-zinc-400">Carregando auditoria...</div>
       )}
 
-      {events.map(event => (
-        <div
-          key={event.id}
-          style={{
-            borderLeft: '4px solid #2563eb',
-            paddingLeft: 12,
-            marginBottom: 16,
-          }}
-        >
-          <p style={{ fontSize: 12, color: '#555' }}>
-            {new Date(event.createdAt).toLocaleString()}
-          </p>
+      {!loading && logs.length === 0 && (
+        <div className="text-zinc-400">Nenhum evento registrado</div>
+      )}
 
-          <p style={{ fontWeight: 'bold' }}>
-            {trackName(event.trackId)}
-          </p>
+      <div className="space-y-3">
+        {logs.map(log => (
+          <div
+            key={log.id}
+            className="p-4 rounded border border-zinc-800"
+          >
+            <div className="font-semibold">
+              {log.entity.toUpperCase()} — {log.action}
+            </div>
 
-          <p>{event.message}</p>
+            <div className="text-sm text-zinc-400">
+              {new Date(log.createdAt).toLocaleString()}
+            </div>
 
-          <p style={{ fontSize: 12, color: '#2563eb' }}>
-            {event.type}
-          </p>
-        </div>
-      ))}
+            {log.meta && (
+              <pre className="mt-2 text-xs text-zinc-400">
+                {JSON.stringify(log.meta, null, 2)}
+              </pre>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
