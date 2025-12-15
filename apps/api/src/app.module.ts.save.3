@@ -17,7 +17,6 @@ import { AssignmentsModule } from './assignments/assignments.module'
 import { ProgressModule } from './progress/progress.module'
 import { RiskModule } from './risk/risk.module'
 import { AuditModule } from './audit/audit.module'
-import { ReportsModule } from './reports/reports.module'
 
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { RolesGuard } from './auth/guards/roles.guard'
@@ -39,7 +38,6 @@ import { RolesGuard } from './auth/guards/roles.guard'
     ProgressModule,
     RiskModule,
     AuditModule,
-    ReportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

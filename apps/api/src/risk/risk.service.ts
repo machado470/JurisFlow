@@ -34,12 +34,18 @@ export class RiskService {
 
       const enriched = assigns.map(a => ({
         ...a,
-        progress: this.progress.get(
-          orgId,
-          p.id,
-          a.trackId,
-        ),
+        progress: this.progress.get(orgId, p.id, a.trackId ?? 'global'),
       }))
+
+      // 🔥 gatilho automático de ação corretiva
+      if (this.calcRisk(enriched) === 'CRÍTICO') {
+        this.assignments.createIfNotExists({
+          orgKey: orgId,
+          personId: p.id,
+          reason: 'Risco crítico identificado',
+          mandatory: true,
+        })
+      }
 
       return {
         personId: p.id,
