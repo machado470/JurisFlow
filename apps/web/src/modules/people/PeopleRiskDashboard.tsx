@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { usePeopleRisk } from './hooks/usePeopleRisk'
+import { useTheme } from '../../theme/ThemeProvider'
 
 const COLORS: Record<string, string> = {
   OK: 'text-green-600',
@@ -9,6 +10,8 @@ const COLORS: Record<string, string> = {
 
 export default function PeopleRiskDashboard() {
   const { list } = usePeopleRisk()
+  const { styles } = useTheme()
+
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -23,37 +26,43 @@ export default function PeopleRiskDashboard() {
     return <div>Carregando risco…</div>
   }
 
-  if (rows.length === 0) {
-    return <div>Nenhum risco encontrado.</div>
-  }
-
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Risco da Equipe</h1>
+    <div className="space-y-6">
+      <h1 className={`text-2xl font-bold ${styles.text}`}>
+        Risco da Equipe
+      </h1>
 
-      <table className="w-full border text-sm">
-        <thead>
-          <tr className="border-b text-left">
-            <th className="p-2">Nome</th>
-            <th className="p-2">Perfil</th>
-            <th className="p-2">Risco</th>
-            <th className="p-2">Pendências</th>
-          </tr>
-        </thead>
+      <div className={`border rounded-lg ${styles.card} ${styles.border}`}>
+        {rows.length === 0 ? (
+          <div className="p-6 text-sm opacity-70">
+            Nenhum risco encontrado.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className={`border-b ${styles.border}`}>
+                <th className="p-3 text-left">Nome</th>
+                <th className="p-3 text-left">Perfil</th>
+                <th className="p-3 text-left">Risco</th>
+                <th className="p-3 text-left">Pendências</th>
+              </tr>
+            </thead>
 
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.personId} className="border-b">
-              <td className="p-2">{r.name}</td>
-              <td className="p-2">{r.role}</td>
-              <td className={`p-2 font-bold ${COLORS[r.risk]}`}>
-                {r.risk}
-              </td>
-              <td className="p-2">{r.incompleteMandatory}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.personId} className={`border-b ${styles.border}`}>
+                  <td className="p-3">{r.name}</td>
+                  <td className="p-3">{r.role}</td>
+                  <td className={`p-3 font-bold ${COLORS[r.risk]}`}>
+                    {r.risk}
+                  </td>
+                  <td className="p-3">{r.incompleteMandatory}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   )
 }

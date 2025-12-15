@@ -1,8 +1,10 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-
-import Home from '../modules/Home'
-import PeopleRiskDashboard from '../modules/people/PeopleRiskDashboard'
+import { Routes, Route } from 'react-router-dom'
 import AppLayout from '../layouts/AppLayout'
+import ExecutiveDashboard from '../modules/admin/ExecutiveDashboard'
+
+function Home() {
+  return <div className="text-white">Home pública</div>
+}
 
 export default function Router() {
   return (
@@ -10,15 +12,13 @@ export default function Router() {
       <Route path="/" element={<Home />} />
 
       <Route
-        path="/admin/people-risk"
+        path="/admin"
         element={
           <AppLayout>
-            <PeopleRiskDashboard />
+            <ExecutiveDashboard />
           </AppLayout>
         }
       />
-
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

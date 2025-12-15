@@ -1,5 +1,6 @@
-import { Navigate } from 'react-router-dom'
+import ExecutiveDashboard from './ExecutiveDashboard'
 
 export default function AdminDashboard() {
-  return <Navigate to="/admin/people-risk" replace />
+  return <ExecutiveDashboard />
 }
+

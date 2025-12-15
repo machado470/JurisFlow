@@ -1,58 +1,62 @@
-import { useTracks } from '../../hooks/useTracks'
-import { useProgress } from '../../hooks/useProgress'
-import { useAudit } from '../../hooks/useAudit'
-
 export default function ExecutiveDashboard() {
-  const { list } = useTracks()
-  const { get, isBlocked } = useProgress()
-  const { list: audit } = useAudit()
+  const stats = [
+    { label: 'Colaboradores monitorados', value: 18 },
+    { label: 'Em risco alto', value: 4, danger: true },
+    { label: 'Trilhas obrigatórias', value: 7 },
+    { label: 'Pendências críticas', value: 3, danger: true },
+  ]
 
-  const tracks = list()
-
-  const total = tracks.length
-  const completed = tracks.filter(t => get(t.id) === 100).length
-  const blocked = tracks.filter(t => isBlocked(t.id)).length
-
-  const compliance =
-    total === 0 ? 0 : Math.round((completed / total) * 100)
+  const peopleAtRisk = [
+    { name: 'Carlos Almeida', risk: 'Alto', color: 'text-red-500' },
+    { name: 'Fernanda Souza', risk: 'Médio', color: 'text-yellow-400' },
+    { name: 'João Pereira', risk: 'Alto', color: 'text-red-500' },
+  ]
 
   return (
-    <div>
-      <h1 style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>
-        Visão Executiva
-      </h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">Visão Executiva</h1>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 32 }}>
-        <Card title="Conformidade Geral" value={`${compliance}%`} />
-        <Card title="Trilhas Bloqueadas" value={blocked} />
-        <Card title="Total de Trilhas" value={total} />
+      {/* Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className={`p-4 rounded border ${
+              s.danger ? 'border-red-500' : 'border-zinc-700'
+            }`}
+          >
+            <div className="text-sm text-zinc-400">{s.label}</div>
+            <div
+              className={`text-2xl font-bold ${
+                s.danger ? 'text-red-500' : ''
+              }`}
+            >
+              {s.value}
+            </div>
+          </div>
+        ))}
       </div>
 
-      <h2 style={{ fontSize: 18, marginBottom: 12 }}>
-        Eventos Recentes
-      </h2>
+      {/* Pessoas em risco */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">
+          Pessoas com maior risco operacional
+        </h2>
 
-      {audit().slice(0, 5).map(e => (
-        <p key={e.id} style={{ fontSize: 12 }}>
-          {new Date(e.createdAt).toLocaleString()} — {e.message}
-        </p>
-      ))}
-    </div>
-  )
-}
-
-function Card({ title, value }: { title: string; value: any }) {
-  return (
-    <div
-      style={{
-        border: '1px solid #e5e7eb',
-        borderRadius: 8,
-        padding: 16,
-        minWidth: 180,
-      }}
-    >
-      <p style={{ fontSize: 12, color: '#555' }}>{title}</p>
-      <strong style={{ fontSize: 22 }}>{value}</strong>
+        <div className="space-y-2">
+          {peopleAtRisk.map((p) => (
+            <div
+              key={p.name}
+              className="flex justify-between items-center p-3 rounded border border-zinc-800"
+            >
+              <span>{p.name}</span>
+              <span className={`font-bold ${p.color}`}>
+                {p.risk}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

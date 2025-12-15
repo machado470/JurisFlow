@@ -176,7 +176,7 @@ importers:
         specifier: ^5.3.3
         version: 5.3.3
       '@vitejs/plugin-react':
-        specifier: ^5.0.4
+        specifier: ^5.1.2
         version: 5.1.2(vite@7.2.7)
       autoprefixer:
         specifier: ^10.4.22

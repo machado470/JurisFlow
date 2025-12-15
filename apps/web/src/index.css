@@ -2,4 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Se quiser customizações adicionais no futuro, coloque abaixo */
+html,
+body,
+#root {
+  height: 100%;
+}

@@ -1,29 +1,37 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable } from '@nestjs/common'
+import { RiskService } from '../risk/risk.service'
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly risk: RiskService) {}
 
-  async getDashboard() {
-    const totalUsers = await this.prisma.user.count();
-    const totalStudents = await this.prisma.user.count({
-      where: { role: 'STUDENT' },
-    });
-    const totalAdmins = await this.prisma.user.count({
-      where: { role: 'ADMIN' },
-    });
-    const totalCategories = await this.prisma.category.count();
-    const totalLessons = await this.prisma.lesson.count();
-    const totalQuestions = await this.prisma.question.count();
+  getDashboard(orgId: string) {
+    const peopleRisk = this.risk.listPeopleRisk(orgId)
+
+    const total = peopleRisk.length
+    const critical = peopleRisk.filter(p => p.risk === 'CRÍTICO').length
+    const attention = peopleRisk.filter(p => p.risk === 'ATENÇÃO').length
+
+    const avgRisk =
+      critical > 0
+        ? 'CRÍTICO'
+        : attention > 0
+        ? 'ATENÇÃO'
+        : 'OK'
+
+    const fitPercentage =
+      total === 0
+        ? 100
+        : Math.round(((total - critical - attention) / total) * 100)
 
     return {
-      users: totalUsers,
-      students: totalStudents,
-      admins: totalAdmins,
-      categories: totalCategories,
-      lessons: totalLessons,
-      questions: totalQuestions,
-    };
+      avgRisk,
+      fitPercentage,
+      people: {
+        total,
+        critical,
+        attention,
+      },
+    }
   }
 }
