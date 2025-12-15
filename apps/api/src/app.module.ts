@@ -11,7 +11,9 @@ import { QuestionsModule } from './questions/questions.module';
 import { SimulationsModule } from './simulations/simulations.module';
 import { StudentsModule } from './students/students.module';
 import { HealthModule } from './health/health.module';
+
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 
 @Module({
   imports: [
@@ -29,7 +31,11 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: JwtAuthGuard, // 1️⃣ valida JWT e injeta user
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,   // 2️⃣ valida role (@Roles)
     },
   ],
 })

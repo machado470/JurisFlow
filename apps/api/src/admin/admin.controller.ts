@@ -1,14 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { AdminService } from './admin.service';
+import { Role } from '@prisma/client';
 
-@Roles('ADMIN')
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
-
+  @Roles(Role.ADMIN)
   @Get('dashboard')
-  getDashboard() {
-    return this.adminService.getDashboard();
+  dashboard() {
+    return {
+      message: 'Bem-vindo ao painel administrativo',
+    };
   }
 }

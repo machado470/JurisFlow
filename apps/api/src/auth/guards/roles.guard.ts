@@ -1,33 +1,34 @@
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
   Injectable,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<
-      ('ADMIN' | 'STUDENT')[]
-    >('roles', [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
-    // 🔓 rota sem @Roles
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const { user } = context.switchToHttp().getRequest();
 
-    if (!user || !requiredRoles.includes(user.role)) {
-      throw new ForbiddenException('Acesso restrito');
+    if (!user || !user.role) {
+      throw new ForbiddenException('Usuário sem role');
+    }
+
+    if (!requiredRoles.includes(user.role)) {
+      throw new ForbiddenException('Acesso negado para este perfil');
     }
 
     return true;
