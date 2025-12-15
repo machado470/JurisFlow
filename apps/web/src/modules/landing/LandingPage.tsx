@@ -1,47 +1,24 @@
-import React from "react";
-import Button from "../../components/ui/Button";
-import Card from "../../components/ui/Card";
-import { colors } from "../../design/colors";
+import { Link } from 'react-router-dom'
 
 export default function LandingPage() {
-  const mode = document.body.dataset.theme || "light";
-  const palette = colors[mode];
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "20px",
-        background: palette.background,
-        color: palette.text,
-        textAlign: "center",
-      }}
-    >
-      {/* Mascote */}
-      <div style={{ fontSize: "64px", marginBottom: "20px" }}>🚧</div>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <h1 className="text-3xl font-bold">
+          JurisFlow
+        </h1>
 
-      {/* Título */}
-      <h1 style={{ fontSize: "2rem", marginBottom: "10px" }}>
-        AutoEscola-Sim
-      </h1>
+        <p className="text-gray-500">
+          Plataforma de treinamento jurídico
+        </p>
 
-      {/* Subtítulo */}
-      <p style={{ fontSize: "1rem", color: palette.textSecondary, marginBottom: "30px" }}>
-        Treine. Aprenda. Passe na Prova.
-      </p>
-
-      {/* Card CTA */}
-      <Card style={{ width: "100%", maxWidth: "360px", textAlign: "center" }}>
-        <Button
-          onClick={() => (window.location.href = "/login")}
+        <Link
+          to="/login"
+          className="inline-block bg-blue-600 text-white px-4 py-2 rounded"
         >
-          Começar Agora
-        </Button>
-      </Card>
+          Entrar
+        </Link>
+      </div>
     </div>
-  );
+  )
 }

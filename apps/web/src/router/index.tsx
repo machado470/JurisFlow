@@ -1,44 +1,24 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom'
 
-import Login from '../pages/Login';
-import Dashboard from '../pages/Dashboard';
-import AdminDashboard from '../modules/admin/AdminDashboard';
-import { RequireAdmin } from './RequireAdmin';
-import AppLayout from '../layouts/AppLayout';
+import Home from '../modules/Home'
+import PeopleRiskDashboard from '../modules/people/PeopleRiskDashboard'
+import AppLayout from '../layouts/AppLayout'
 
 export default function Router() {
   return (
     <Routes>
-      {/* inicial */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Home />} />
 
-      {/* pública */}
-      <Route path="/login" element={<Login />} />
-
-      {/* aluno */}
       <Route
-        path="/dashboard"
+        path="/admin/people-risk"
         element={
           <AppLayout>
-            <Dashboard />
+            <PeopleRiskDashboard />
           </AppLayout>
         }
       />
 
-      {/* admin */}
-      <Route
-        path="/admin"
-        element={
-          <RequireAdmin>
-            <AppLayout>
-              <AdminDashboard />
-            </AppLayout>
-          </RequireAdmin>
-        }
-      />
-
-      {/* fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  );
+  )
 }

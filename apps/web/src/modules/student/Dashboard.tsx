@@ -1,159 +1,94 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import BottomNav from "../../components/ui/BottomNav";
-import {
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useNavigate } from 'react-router-dom'
+import { tracks } from '../../mocks/education'
+import { useProgress } from '../../hooks/useProgress'
+import { useCertificate } from '../../hooks/useCertificate'
 
-export default function StudentDashboard() {
-  const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await axios.get("http://localhost:3001/simulations/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        // Ordena por data ASC para o gráfico
-        const ordered = res.data.sort(
-          (a: any, b: any) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-
-        setHistory(ordered);
-      } catch (e) {
-        console.error("Erro carregando histórico:", e);
-      }
-
-      setLoading(false);
-    }
-
-    load();
-  }, []);
-
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:text-white">
-        Carregando...
-      </div>
-    );
-
-  // Estatísticas gerais
-  const totalSimulados = history.length;
-  const media =
-    totalSimulados > 0
-      ? Math.round(history.reduce((acc, h) => acc + h.percentage, 0) / totalSimulados)
-      : 0;
-
-  const melhor = totalSimulados > 0 ? Math.max(...history.map((h) => h.percentage)) : 0;
+export default function Dashboard() {
+  const navigate = useNavigate()
+  const { get } = useProgress()
+  const { get: getCertificate } = useCertificate()
 
   return (
-    <div className="min-h-screen p-6 pb-20 bg-gray-100 dark:bg-gray-900 dark:text-white">
-      <h1 className="text-3xl font-bold mb-6">Seu Progresso</h1>
+    <div>
+      <h1 style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
+        JurisFlow
+      </h1>
 
-      {/* Estatísticas rápidas */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow text-center">
-          <p className="text-sm text-gray-500">Total de Simulados</p>
-          <p className="text-3xl font-bold text-blue-600">{totalSimulados}</p>
-        </div>
+      <p style={{ marginBottom: 24, color: '#555' }}>
+        Trilhas com validação jurídica por quiz.
+      </p>
 
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow text-center">
-          <p className="text-sm text-gray-500">Média Geral</p>
-          <p className="text-3xl font-bold text-green-600">{media}%</p>
-        </div>
+      {tracks.map(track => {
+        const progress = get(track.id)
+        const certificate = getCertificate(track.id)
 
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow text-center">
-          <p className="text-sm text-gray-500">Melhor Desempenho</p>
-          <p className="text-3xl font-bold text-purple-600">{melhor}%</p>
-        </div>
-      </div>
+        return (
+          <div
+            key={track.id}
+            style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            <strong>{track.title}</strong>
 
-      {/* Gráfico */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-6">
-        <h2 className="text-xl font-semibold mb-3">Evolução de Acertos</h2>
-
-        {history.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">Nenhum simulado realizado.</p>
-        ) : (
-          <div className="w-full h-64">
-            <ResponsiveContainer>
-              <LineChart data={history}>
-                <Line
-                  type="monotone"
-                  dataKey="percentage"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                />
-                <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
-                <XAxis
-                  dataKey="createdAt"
-                  tickFormatter={(v) =>
-                    new Date(v).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
-                  }
-                />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: any) => `${value}%`}
-                  labelFormatter={(v) =>
-                    `Data: ${new Date(v).toLocaleString("pt-BR")}`
-                  }
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {/* Histórico detalhado */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-3">Histórico Completo</h2>
-
-        {history.length === 0 && (
-          <p className="text-gray-600 dark:text-gray-400">
-            Você ainda não realizou nenhum simulado.
-          </p>
-        )}
-
-        <div className="flex flex-col gap-4">
-          {history.map((h) => (
             <div
-              key={h.id}
-              className="bg-white dark:bg-gray-800 shadow-lg p-4 rounded-xl"
+              style={{
+                height: 8,
+                background: '#e5e7eb',
+                borderRadius: 4,
+                marginTop: 8,
+                overflow: 'hidden',
+              }}
             >
-              <p className="text-lg font-semibold">
-                Desempenho:{" "}
-                <span
-                  className={
-                    h.percentage >= 70
-                      ? "text-green-500"
-                      : h.percentage >= 40
-                      ? "text-yellow-400"
-                      : "text-red-500"
-                  }
-                >
-                  {h.percentage}%
-                </span>
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Data: {new Date(h.createdAt).toLocaleString("pt-BR")}
-              </p>
+              <div
+                style={{
+                  width: `${progress}%`,
+                  background: '#2563eb',
+                  height: '100%',
+                }}
+              />
             </div>
-          ))}
-        </div>
-      </div>
 
-      <BottomNav />
+            <p style={{ fontSize: 12, marginTop: 6 }}>
+              Status:{' '}
+              {progress === 100 ? 'Concluído' : 'Em andamento'}
+            </p>
+
+            {certificate ? (
+              <button
+                onClick={() => navigate(`/certificate/${track.id}`)}
+                style={{
+                  marginTop: 12,
+                  padding: '6px 12px',
+                  border: '1px solid #16a34a',
+                  background: '#16a34a',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Ver certificado
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate(`/study/${track.id}`)}
+                style={{
+                  marginTop: 12,
+                  padding: '6px 12px',
+                  border: '1px solid #2563eb',
+                  background: '#2563eb',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Continuar
+              </button>
+            )}
+          </div>
+        )
+      })}
     </div>
-  );
+  )
 }

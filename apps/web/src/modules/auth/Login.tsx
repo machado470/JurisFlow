@@ -1,68 +1,90 @@
-import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useUser } from '../../hooks/useUser'
+import { useOrganization } from '../../hooks/useOrganization'
 
 export default function Login() {
-  const nav = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate()
+  const { set: setUser } = useUser()
+  const { set: setOrg } = useOrganization()
 
-  async function handleLogin(e: any) {
-    e.preventDefault();
-    setLoading(true);
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [orgName, setOrgName] = useState('')
 
-    try {
-      const res = await axios.post("http://localhost:3001/auth/login", {
-        email,
-        password,
-      });
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
 
-      const token = res.data.access_token;
-      localStorage.setItem("token", token);
-
-      nav("/aluno/home");
-    } catch (err) {
-      alert("Email ou senha incorretos.");
+    if (!name || !email || !orgName) {
+      alert('Preencha todos os campos')
+      return
     }
 
-    setLoading(false);
+    const orgId = crypto.randomUUID()
+
+    setOrg({
+      id: orgId,
+      name: orgName,
+      slug: orgName.toLowerCase().replace(/\s+/g, '-'),
+    })
+
+    setUser({
+      id: crypto.randomUUID(),
+      name,
+      email,
+      role: email.includes('admin') ? 'ADMIN' : 'STUDENT',
+      department: 'Jurídico',
+    })
+
+    navigate('/dashboard')
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-8 w-full max-w-sm"
+    <form
+      onSubmit={submit}
+      style={{
+        maxWidth: 400,
+        margin: '80px auto',
+        padding: 24,
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+      }}
+    >
+      <h1 style={{ marginBottom: 16 }}>JurisFlow</h1>
+
+      <input
+        placeholder="Nome"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        style={{ width: '100%', marginBottom: 8 }}
+      />
+
+      <input
+        placeholder="Email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        style={{ width: '100%', marginBottom: 8 }}
+      />
+
+      <input
+        placeholder="Empresa / Escritório"
+        value={orgName}
+        onChange={e => setOrgName(e.target.value)}
+        style={{ width: '100%', marginBottom: 16 }}
+      />
+
+      <button
+        type="submit"
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          background: '#2563eb',
+          color: '#fff',
+          border: 'none',
+        }}
       >
-        <h1 className="text-2xl font-semibold mb-6 text-center dark:text-white">
-          AutoEscola SIM
-        </h1>
-
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-3 border rounded-md mb-4 dark:bg-gray-700 dark:text-white"
-        />
-
-        <input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-3 border rounded-md mb-4 dark:bg-gray-700 dark:text-white"
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-    </div>
-  );
+        Entrar
+      </button>
+    </form>
+  )
 }

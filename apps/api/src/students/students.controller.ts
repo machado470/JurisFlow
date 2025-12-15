@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Req } from '@nestjs/common'
+import { Controller, Get, Req } from '@nestjs/common'
 import { StudentsService } from './students.service'
 import { Request } from 'express'
 
@@ -8,16 +8,12 @@ export class StudentsController {
 
   @Get('me/dashboard')
   async dashboard(@Req() req: Request) {
-    const user = req.user as any
-    return this.service.getDashboard(user.id)
-  }
+    const user = req.user as {
+      userId: string
+      email: string
+      role: string
+    }
 
-  @Post('lessons/:lessonId/complete')
-  async completeLesson(
-    @Req() req: Request,
-    @Param('lessonId') lessonId: string,
-  ) {
-    const user = req.user as any
-    return this.service.completeLesson(user.id, lessonId)
+    return this.service.getDashboard(user.userId)
   }
 }

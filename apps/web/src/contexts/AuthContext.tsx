@@ -1,67 +1,38 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext } from 'react'
 
-type UserRole = 'ADMIN' | 'STUDENT';
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-};
+type UserRole = 'ADMIN' | 'STUDENT' | null
 
 type AuthContextType = {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
-};
+  token: string | null
+  role: UserRole
+}
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = createContext<AuthContextType>({
+  token: null,
+  role: null,
+})
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const token = localStorage.getItem('token')
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+  let role: UserRole = null
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      role = payload.role ?? null
+    } catch {
+      role = null
     }
-  }, []);
-
-  function login(token: string, user: User) {
-    setToken(token);
-    setUser(user);
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-  }
-
-  function logout() {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isAuthenticated: !!token,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ token, role }}>
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  return useContext(AuthContext)
 }
