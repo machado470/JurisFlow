@@ -1,86 +1,32 @@
-import { PrismaClient, RiskLevel } from '@prisma/client'
+import { PrismaClient, UserRole } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  // limpa tudo (demo limpa)
-  await prisma.auditEvent.deleteMany()
-  await prisma.assessment.deleteMany()
-  await prisma.assignment.deleteMany()
-  await prisma.track.deleteMany()
-  await prisma.person.deleteMany()
+  const email = 'admin@autoescola.com'
+  const password = 'admin123'
 
-  // pessoas
-  const ana = await prisma.person.create({
+  const existing = await prisma.user.findUnique({
+    where: { email },
+  })
+
+  if (existing) {
+    console.log('Admin já existe')
+    return
+  }
+
+  const hash = await bcrypt.hash(password, 10)
+
+  await prisma.user.create({
     data: {
-      name: 'Ana Souza',
-      email: 'ana@demo.com',
-      role: 'ADVOGADA',
+      email,
+      password: hash,
+      role: UserRole.ADMIN,
     },
   })
 
-  const bruno = await prisma.person.create({
-    data: {
-      name: 'Bruno Lima',
-      email: 'bruno@demo.com',
-      role: 'ADVOGADO',
-    },
-  })
-
-  const carla = await prisma.person.create({
-    data: {
-      name: 'Carla Mendes',
-      email: 'carla@demo.com',
-      role: 'ESTAGIÁRIA',
-    },
-  })
-
-  // trilhas
-  const lgpd = await prisma.track.create({
-    data: {
-      slug: 'lgpd',
-      title: 'LGPD na Prática',
-      description: 'Conformidade e boas práticas',
-    },
-  })
-
-  const etica = await prisma.track.create({
-    data: {
-      slug: 'etica',
-      title: 'Ética Profissional',
-      description: 'Conduta e responsabilidades',
-    },
-  })
-
-  // assignments (risco diferente para cada)
-  await prisma.assignment.create({
-    data: {
-      personId: ana.id,
-      trackId: lgpd.id,
-      progress: 85,
-      risk: RiskLevel.LOW,
-    },
-  })
-
-  await prisma.assignment.create({
-    data: {
-      personId: bruno.id,
-      trackId: etica.id,
-      progress: 45,
-      risk: RiskLevel.HIGH,
-    },
-  })
-
-  await prisma.assignment.create({
-    data: {
-      personId: carla.id,
-      trackId: lgpd.id,
-      progress: 15,
-      risk: RiskLevel.CRITICAL,
-    },
-  })
-
-  console.log('✅ Seed demo executado com sucesso')
+  console.log('Admin criado com sucesso')
 }
 
 main()
