@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { themes } from './themes'
 
 export type ThemeName = 'dark' | 'light'
 
 type ThemeContextType = {
   theme: ThemeName
   setTheme: (t: ThemeName) => void
+  styles: any
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null)
@@ -18,7 +20,13 @@ export function ThemeProvider({ children }: { children: any }) {
   }, [theme])
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        setTheme,
+        styles: themes[theme],
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   )
@@ -26,6 +34,8 @@ export function ThemeProvider({ children }: { children: any }) {
 
 export function useTheme() {
   const ctx = useContext(ThemeContext)
-  if (!ctx) throw new Error('useTheme must be used within ThemeProvider')
+  if (!ctx) {
+    throw new Error('useTheme must be used within ThemeProvider')
+  }
   return ctx
 }

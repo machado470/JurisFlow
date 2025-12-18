@@ -1,58 +1,75 @@
 import { useEffect, useState } from 'react'
-import useOrganization from './useOrganization'
-import api from '../services/api'
-import { isResolved } from '../utils/demoRisk'
+import { DEMO_MODE } from '../config/demo'
+import { api } from '../services/api'
 
-type Stat = {
-  label: string
-  value: number
-  danger?: boolean
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+type PersonAtRisk = {
+  personId: string
+  name: string
+  email: string
+  risk: RiskLevel
+  progress: number
+  assignments: number
+}
+
+type ExecutiveStats = {
+  totalPeople: number
+  critical: number
+  high: number
+  medium: number
+  low: number
 }
 
 export function useExecutiveDashboard() {
-  const { get } = useOrganization()
-  const org = get()
-
-  const [stats, setStats] = useState<Stat[]>([])
-  const [peopleAtRisk, setPeopleAtRisk] = useState<any[]>([])
+  const [stats, setStats] = useState<ExecutiveStats | null>(null)
+  const [peopleAtRisk, setPeopleAtRisk] = useState<PersonAtRisk[]>([])
   const [loading, setLoading] = useState(true)
-  const [mode, setMode] = useState<'demo' | 'real'>('demo')
+  const [mode, setMode] = useState<'demo' | 'live'>('demo')
 
   useEffect(() => {
-    if (!org) {
-      setMode('demo')
+    async function load() {
+      try {
+        setLoading(true)
 
-      const allPeople = [
-        { personId: '1', name: 'João Silva', risk: 'CRÍTICO' },
-        { personId: '2', name: 'Maria Souza', risk: 'ATENÇÃO' },
-      ]
+        // 🧪 DEMO MODE (mantém comportamento atual)
+        if (DEMO_MODE) {
+          const demo = await import('../demo/executive-demo')
+          setStats(demo.stats)
+          setPeopleAtRisk(demo.peopleAtRisk)
+          setMode('demo')
+          return
+        }
 
-      const filtered = allPeople.filter(p => !isResolved(p.personId))
-      const critical = filtered.filter(p => p.risk === 'CRÍTICO').length
+        // 🚀 LIVE MODE (backend real)
+        const res = await api.get('/reports/executive')
 
-      setPeopleAtRisk(filtered)
-      setStats([
-        { label: 'Colaboradores', value: 12 },
-        { label: 'Trilhas ativas', value: 5 },
-        { label: 'Ações pendentes', value: filtered.length, danger: filtered.length > 0 },
-        { label: 'Risco crítico', value: critical, danger: critical > 0 },
-      ])
+        const data = res.data.data
 
-      setLoading(false)
-      return
+        setStats({
+          totalPeople: data.summary.totalPeople,
+          critical: data.summary.critical,
+          high: data.summary.high,
+          medium: data.summary.medium,
+          low: data.summary.low,
+        })
+
+        setPeopleAtRisk(data.peopleAtRisk)
+        setMode('live')
+      } catch (err) {
+        console.error('Erro ao carregar dashboard executivo', err)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setMode('real')
-    setLoading(true)
+    load()
+  }, [])
 
-    api
-      .get('/admin/executive', { params: { orgId: org.id } })
-      .then(res => {
-        setStats(res.data.stats ?? [])
-        setPeopleAtRisk(res.data.peopleAtRisk ?? [])
-      })
-      .finally(() => setLoading(false))
-  }, [org])
-
-  return { stats, peopleAtRisk, loading, mode }
+  return {
+    stats,
+    peopleAtRisk,
+    loading,
+    mode,
+  }
 }

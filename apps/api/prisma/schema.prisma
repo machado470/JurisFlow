@@ -7,123 +7,106 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String?
-  isActive     Boolean  @default(false)
-  role         Role
-  createdAt    DateTime @default(now())
-
-  studentProgress StudentProgress[]
-  studentLessons  StudentLesson[]
-  simulations     Simulation[]
-  attempts        SimuladoAttempt[] @relation("UserAttempts")
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
-model Category {
-  id    String @id @default(uuid())
-  name  String @unique
-
-  phases  Phase[]
-  lessons Lesson[]
-}
-
-model Phase {
-  id         String @id @default(uuid())
-  name       String
-  order      Int
-  categoryId String
-
-  category  Category @relation(fields: [categoryId], references: [id])
-  lessons   Lesson[]
-  progress  StudentProgress[]
-  questions Question[]
-}
-
-model Lesson {
-  id         String @id @default(uuid())
-  title      String
-  order      Int
-  content    String
-  imageUrl   String?
-  videoUrl   String?
-  categoryId String
-  phaseId    String
-
-  category Category @relation(fields: [categoryId], references: [id])
-  phase    Phase    @relation(fields: [phaseId], references: [id])
-
-  studentLessons StudentLesson[]
-}
-
-model StudentLesson {
-  id        String   @id @default(uuid())
-  userId    String
-  lessonId  String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id])
-  lesson Lesson @relation(fields: [lessonId], references: [id])
-
-  @@unique([userId, lessonId])
-}
-
-model StudentProgress {
-  id               String   @id @default(uuid())
-  userId           String
-  phaseId          String
-  lessonsCompleted Int      @default(0)
-  correctAnswers   Int      @default(0)
-  finished         Boolean  @default(false)
-
-  user  User  @relation(fields: [userId], references: [id])
-  phase Phase @relation(fields: [phaseId], references: [id])
-
-  @@unique([userId, phaseId])
-}
-
-model Question {
-  id      String @id @default(uuid())
-  text    String
-  answer  String
-  phaseId String
-
-  phase Phase @relation(fields: [phaseId], references: [id])
-}
-
-model SimuladoAttempt {
-  id         String   @id @default(uuid())
-  userId     String
-  percentage Int
-  createdAt  DateTime @default(now())
-
-  user User @relation("UserAttempts", fields: [userId], references: [id])
-}
-
-model Simulation {
-  id         String   @id @default(cuid())
-  userId     String
-  startedAt  DateTime @default(now())
-  finishedAt DateTime?
-
-  user    User               @relation(fields: [userId], references: [id])
-  answers SimulationAnswer[]
-}
-
-model SimulationAnswer {
-  id           String   @id @default(cuid())
-  simulationId String
-  questionId   String
-  selected     String
-  correct      Boolean
-  createdAt    DateTime @default(now())
-
-  simulation Simulation @relation(fields: [simulationId], references: [id])
-}
-
-enum Role {
-  STUDENT
+enum UserRole {
   ADMIN
+  COLLABORATOR
+}
+
+model Person {
+  id     String  @id @default(uuid())
+  name   String
+  email  String?
+  role   String
+  active Boolean @default(true)
+
+  // 🔐 vínculo opcional com login
+  user User?
+
+  assignments Assignment[]
+  assessments Assessment[]
+  auditEvents AuditEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  password String
+  role     UserRole
+
+  // vínculo com a pessoa avaliada (colaborador)
+  personId String? @unique
+  person   Person? @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Track {
+  id          String  @id @default(uuid())
+  slug        String  @unique
+  title       String
+  description String?
+
+  assignments Assignment[]
+  assessments Assessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id       String @id @default(uuid())
+  personId String
+  trackId  String
+
+  progress Int       @default(0)
+  risk     RiskLevel @default(LOW)
+
+  person Person @relation(fields: [personId], references: [id])
+  track  Track  @relation(fields: [trackId], references: [id])
+
+  assessments Assessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([personId, trackId])
+}
+
+model Assessment {
+  id           String @id @default(uuid())
+  assignmentId String
+  personId     String
+  trackId      String
+
+  score Int
+  risk  RiskLevel
+  notes String?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+  person     Person     @relation(fields: [personId], references: [id])
+  track      Track      @relation(fields: [trackId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model AuditEvent {
+  id       String  @id @default(uuid())
+  personId String?
+  action   String
+  context  String?
+
+  person Person? @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
 }

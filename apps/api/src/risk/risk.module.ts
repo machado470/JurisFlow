@@ -1,17 +1,14 @@
 import { Module } from '@nestjs/common'
 import { RiskService } from './risk.service'
-import { RiskController } from './risk.controller'
-import { PeopleModule } from '../people/people.module'
-import { AssignmentsModule } from '../assignments/assignments.module'
-import { ProgressModule } from '../progress/progress.module'
+import { PrismaModule } from '../prisma/prisma.module'
+import { AuditModule } from '../audit/audit.module'
 
 @Module({
   imports: [
-    PeopleModule,
-    AssignmentsModule,
-    ProgressModule,
+    PrismaModule,
+    AuditModule,
   ],
-  controllers: [RiskController],
   providers: [RiskService],
+  exports: [RiskService], // 👈 ESSENCIAL
 })
 export class RiskModule {}

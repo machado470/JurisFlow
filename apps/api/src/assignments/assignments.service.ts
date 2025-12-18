@@ -1,84 +1,85 @@
 import { Injectable } from '@nestjs/common'
-import { randomUUID } from 'crypto'
+import { PrismaService } from '../prisma/prisma.service'
+import { RiskLevel } from '@prisma/client'
 import { AuditService } from '../audit/audit.service'
-
-export type AssignmentStatus = 'PENDING' | 'COMPLETED'
-
-export type Assignment = {
-  id: string
-  orgKey: string
-  personId: string
-  trackId?: string
-  reason: string
-  mandatory: boolean
-  status: AssignmentStatus
-  createdAt: Date
-  completedAt?: Date
-}
 
 @Injectable()
 export class AssignmentsService {
-  private assignments: Assignment[] = []
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  constructor(private readonly audit: AuditService) {}
-
-  list(orgId: string) {
-    return this.assignments.filter(a => a.orgKey === orgId)
+  list() {
+    return this.prisma.assignment.findMany({
+      include: {
+        person: true,
+        track: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
   }
 
-  listByPerson(orgId: string, personId: string) {
-    return this.assignments.filter(
-      a => a.orgKey === orgId && a.personId === personId,
-    )
+  listByPerson(personId: string) {
+    return this.prisma.assignment.findMany({
+      where: { personId },
+      include: { track: true },
+    })
   }
 
-  createIfNotExists(
-    data: Omit<Assignment, 'id' | 'status' | 'createdAt'>,
-  ) {
-    const exists = this.assignments.find(a =>
-      a.orgKey === data.orgKey &&
-      a.personId === data.personId &&
-      a.reason === data.reason &&
-      a.status === 'PENDING',
-    )
+  async createIfNotExists(data: {
+    personId: string
+    trackId: string
+  }) {
+    const exists = await this.prisma.assignment.findUnique({
+      where: {
+        personId_trackId: {
+          personId: data.personId,
+          trackId: data.trackId,
+        },
+      },
+    })
 
     if (exists) return exists
 
-    const assignment: Assignment = {
-      id: randomUUID(),
-      status: 'PENDING',
-      createdAt: new Date(),
-      ...data,
-    }
+    const assignment = await this.prisma.assignment.create({
+      data: {
+        personId: data.personId,
+        trackId: data.trackId,
+        progress: 0,
+        risk: RiskLevel.LOW,
+      },
+    })
 
-    this.assignments.push(assignment)
-
-    this.audit.log(
-      'assignment',
-      assignment.id,
-      'CREATED',
-      { personId: assignment.personId },
-    )
+    // ✅ AUDITORIA REAL
+    await this.audit.log({
+      personId: assignment.personId,
+      action: 'ASSIGNMENT_CREATED',
+      context: `Trilha atribuída`,
+    })
 
     return assignment
   }
 
-  complete(id: string) {
-    const assignment = this.assignments.find(a => a.id === id)
+  async updateProgress(
+    id: string,
+    progress: number,
+    risk: RiskLevel,
+  ) {
+    const assignment = await this.prisma.assignment.update({
+      where: { id },
+      data: {
+        progress,
+        risk,
+      },
+    })
 
-    if (!assignment) {
-      throw new Error('Assignment não encontrado')
-    }
-
-    assignment.status = 'COMPLETED'
-    assignment.completedAt = new Date()
-
-    this.audit.log(
-      'assignment',
-      assignment.id,
-      'COMPLETED',
-      { personId: assignment.personId },
-    )
+    // ✅ AUDITORIA REAL
+    await this.audit.log({
+      personId: assignment.personId,
+      action: 'ASSIGNMENT_UPDATED',
+      context: `Progresso: ${progress}% · Risco: ${risk}`,
+    })
 
     return assignment
   }

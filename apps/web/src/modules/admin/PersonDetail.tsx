@@ -1,48 +1,92 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { markResolved } from '../../utils/demoRisk'
+import { useParams } from 'react-router-dom'
+import Card from '../../components/ui/Card'
+import { usePersonDetail } from '../../hooks/usePersonDetail'
 
 export default function PersonDetail() {
-  const { personId } = useParams()
-  const navigate = useNavigate()
+  const { id } = useParams()
+  const { person, assignments, audit, loading } =
+    usePersonDetail(id)
 
-  function resolve() {
-    if (!personId) return
-    markResolved(personId)
-    navigate('/admin/executive')
+  if (loading) {
+    return (
+      <Card title="Carregando pessoa...">
+        <p className="text-sm opacity-70">
+          Buscando dados completos.
+        </p>
+      </Card>
+    )
+  }
+
+  if (!person) {
+    return (
+      <Card title="Pessoa não encontrada">
+        <p className="text-sm opacity-70">
+          Verifique o identificador.
+        </p>
+      </Card>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <Link to="/admin/executive" className="text-sm opacity-70">
-        ← Voltar ao dashboard
-      </Link>
-
-      <h1 className="text-2xl font-semibold">
-        Colaborador #{personId}
-      </h1>
-
-      <div className="border rounded-lg p-4 bg-amber-50">
-        <div className="font-semibold text-amber-700">
-          Risco identificado
-        </div>
-        <div className="text-sm text-amber-700">
-          Este colaborador possui ações corretivas pendentes.
-        </div>
-      </div>
-
-      <div className="border rounded-lg p-4">
-        <h2 className="font-semibold mb-2">Ação recomendada</h2>
-        <p className="text-sm opacity-80">
-          Revisar trilhas obrigatórias e concluir treinamentos pendentes.
+    <div className="space-y-8">
+      {/* Cabeçalho */}
+      <div>
+        <h1 className="text-2xl font-bold">
+          {person.name}
+        </h1>
+        <p className="text-sm opacity-70">
+          {person.email} · {person.role}
         </p>
-
-        <button
-          className="mt-4 px-4 py-2 rounded bg-black text-white"
-          onClick={resolve}
-        >
-          Marcar ação como concluída
-        </button>
       </div>
+
+      {/* Trilhas */}
+      <Card title="Trilhas atribuídas">
+        {assignments.length === 0 && (
+          <p className="text-sm opacity-70">
+            Nenhuma trilha atribuída.
+          </p>
+        )}
+
+        <div className="space-y-3">
+          {assignments.map(a => (
+            <div
+              key={a.id}
+              className="flex items-center justify-between"
+            >
+              <div>
+                <p className="font-medium">
+                  {a.track.title}
+                </p>
+                <p className="text-sm opacity-70">
+                  Progresso: {a.progress}%
+                </p>
+              </div>
+
+              <span className="text-sm font-semibold">
+                Risco: {a.risk}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Auditoria */}
+      <Card title="Eventos recentes">
+        {audit.length === 0 && (
+          <p className="text-sm opacity-70">
+            Nenhum evento registrado.
+          </p>
+        )}
+
+        <ul className="space-y-2">
+          {audit.map(e => (
+            <li key={e.id} className="text-sm">
+              <strong>{e.action}</strong>
+              {e.context && ` — ${e.context}`}
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   )
 }

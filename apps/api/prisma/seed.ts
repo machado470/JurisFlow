@@ -1,141 +1,93 @@
-import { PrismaClient, Role } from '@prisma/client'
-import bcrypt from 'bcrypt'
+import { PrismaClient, RiskLevel } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('⚖️ Seed Jurídico – Direito do Trabalho iniciado')
+  // limpa tudo (demo limpa)
+  await prisma.auditEvent.deleteMany()
+  await prisma.assessment.deleteMany()
+  await prisma.assignment.deleteMany()
+  await prisma.track.deleteMany()
+  await prisma.person.deleteMany()
 
-  // ===== ADMIN =====
-  await prisma.user.upsert({
-    where: { email: 'admin@jurisflow.com' },
-    update: {},
-    create: {
-      name: 'Administrador',
-      email: 'admin@jurisflow.com',
-      passwordHash: await bcrypt.hash('admin123', 10),
-      role: Role.ADMIN,
-      isActive: true,
+  // pessoas
+  const ana = await prisma.person.create({
+    data: {
+      name: 'Ana Souza',
+      email: 'ana@demo.com',
+      role: 'ADVOGADA',
     },
   })
-  console.log('✅ Admin ok')
 
-  // ===== STUDENT =====
-  await prisma.user.upsert({
-    where: { email: 'aluno@jurisflow.com' },
-    update: {},
-    create: {
-      name: 'Aluno Jurídico',
-      email: 'aluno@jurisflow.com',
-      passwordHash: await bcrypt.hash('123456', 10),
-      role: Role.STUDENT,
-      isActive: true,
+  const bruno = await prisma.person.create({
+    data: {
+      name: 'Bruno Lima',
+      email: 'bruno@demo.com',
+      role: 'ADVOGADO',
     },
   })
-  console.log('👨‍⚖️ Student ok')
 
-  // ===== CATEGORY =====
-  let category = await prisma.category.findFirst({
-    where: { name: 'Direito do Trabalho' },
+  const carla = await prisma.person.create({
+    data: {
+      name: 'Carla Mendes',
+      email: 'carla@demo.com',
+      role: 'ESTAGIÁRIA',
+    },
   })
 
-  if (!category) {
-    category = await prisma.category.create({
-      data: { name: 'Direito do Trabalho' },
-    })
-  }
-  console.log('📂 Categoria ok')
-
-  // ===== PHASES =====
-  await prisma.phase.deleteMany({
-    where: { categoryId: category.id },
+  // trilhas
+  const lgpd = await prisma.track.create({
+    data: {
+      slug: 'lgpd',
+      title: 'LGPD na Prática',
+      description: 'Conformidade e boas práticas',
+    },
   })
 
-  const phases = await prisma.$transaction([
-    prisma.phase.create({
-      data: { name: 'Fundamentos Trabalhistas', order: 1, categoryId: category.id },
-    }),
-    prisma.phase.create({
-      data: { name: 'Prazos Trabalhistas', order: 2, categoryId: category.id },
-    }),
-    prisma.phase.create({
-      data: { name: 'Peças Processuais', order: 3, categoryId: category.id },
-    }),
-    prisma.phase.create({
-      data: { name: 'Caso Simulado', order: 4, categoryId: category.id },
-    }),
-  ])
-  console.log('📚 Fases ok')
-
-  // ===== LESSONS =====
-  await prisma.lesson.deleteMany({
-    where: { categoryId: category.id },
+  const etica = await prisma.track.create({
+    data: {
+      slug: 'etica',
+      title: 'Ética Profissional',
+      description: 'Conduta e responsabilidades',
+    },
   })
 
-  await prisma.lesson.createMany({
-    data: [
-      {
-        title: 'Conceitos Essenciais da CLT',
-        order: 1,
-        content: 'Vínculo, jornada, salário e subordinação.',
-        categoryId: category.id,
-        phaseId: phases[0].id,
-      },
-      {
-        title: 'Prazos Trabalhistas',
-        order: 1,
-        content: 'Prescrição bienal e quinquenal.',
-        categoryId: category.id,
-        phaseId: phases[1].id,
-      },
-      {
-        title: 'Petição Inicial',
-        order: 1,
-        content: 'Estrutura básica da reclamação trabalhista.',
-        categoryId: category.id,
-        phaseId: phases[2].id,
-      },
-      {
-        title: 'Caso Simulado',
-        order: 1,
-        content: 'Demissão sem justa causa.',
-        categoryId: category.id,
-        phaseId: phases[3].id,
-      },
-    ],
-  })
-  console.log('📖 Lições ok')
-
-  // ===== QUESTIONS =====
-  await prisma.question.deleteMany({
-    where: { phaseId: { in: phases.map(p => p.id) } },
+  // assignments (risco diferente para cada)
+  await prisma.assignment.create({
+    data: {
+      personId: ana.id,
+      trackId: lgpd.id,
+      progress: 85,
+      risk: RiskLevel.LOW,
+    },
   })
 
-  await prisma.question.createMany({
-    data: [
-      {
-        text: 'Qual o prazo para ajuizar ação trabalhista após a demissão?',
-        answer: '2 anos',
-        phaseId: phases[1].id,
-      },
-      {
-        text: 'Quais verbas são devidas na demissão sem justa causa?',
-        answer: 'Saldo de salário, aviso prévio, FGTS + 40%',
-        phaseId: phases[3].id,
-      },
-    ],
+  await prisma.assignment.create({
+    data: {
+      personId: bruno.id,
+      trackId: etica.id,
+      progress: 45,
+      risk: RiskLevel.HIGH,
+    },
   })
-  console.log('❓ Perguntas ok')
 
-  console.log('✅ Seed finalizado com sucesso')
+  await prisma.assignment.create({
+    data: {
+      personId: carla.id,
+      trackId: lgpd.id,
+      progress: 15,
+      risk: RiskLevel.CRITICAL,
+    },
+  })
+
+  console.log('✅ Seed demo executado com sucesso')
 }
 
 main()
-  .catch(err => {
-    console.error('❌ Seed falhou:', err)
+  .catch(e => {
+    console.error(e)
     process.exit(1)
   })
   .finally(async () => {
     await prisma.$disconnect()
   })
-

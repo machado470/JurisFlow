@@ -1,20 +1,43 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import Login from '../pages/Login'
 import AdminDashboard from '../modules/admin/AdminDashboard'
-import ExecutiveDashboard from '../modules/admin/ExecutiveDashboard'
-import RiskReport from '../modules/admin/RiskReport'
-import PersonDetail from '../modules/admin/PersonDetail'
+import CollaboratorDashboard from '../modules/collaborator/Dashboard'
+import CollaboratorAssessment from '../modules/collaborator/Assessment'
+import { RequireAuth } from '../auth/RequireAuth'
 
 export default function Router() {
   return (
     <Routes>
-      <Route path="/admin" element={<AdminDashboard />}>
-        <Route index element={<Navigate to="executive" />} />
-        <Route path="executive" element={<ExecutiveDashboard />} />
-        <Route path="risk" element={<RiskReport />} />
-        <Route path="people/:personId" element={<PersonDetail />} />
-      </Route>
+      <Route path="/login" element={<Login />} />
 
-      <Route path="*" element={<Navigate to="/admin" />} />
+      <Route
+        path="/admin/*"
+        element={
+          <RequireAuth role="ADMIN">
+            <AdminDashboard />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/collaborator"
+        element={
+          <RequireAuth role="COLLABORATOR">
+            <CollaboratorDashboard />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/collaborator/assessment/:assignmentId"
+        element={
+          <RequireAuth role="COLLABORATOR">
+            <CollaboratorAssessment />
+          </RequireAuth>
+        }
+      />
+
+      <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   )
 }
