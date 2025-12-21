@@ -1,23 +1,45 @@
-# AutoEscola-Sim — MV1 Baseline 🚗
+# JurisFlow — Risk & Compliance Engine
 
-**Branch:** feat/exam-module  
-**Última tag:** v2.0.0
+Sistema de gestão de risco humano, treinamento por trilhas e auditoria contínua
+para ambientes profissionais (jurídico, compliance, operações).
 
-## ✅ Modelos Prisma
-- Question {
-- Choice {
-- ExamSession {
-- StudentAnswer {
+Este projeto evoluiu a partir do AutoEscola-Sim e hoje funciona como um
+motor genérico de avaliação, risco e ações corretivas.
 
-## ▶️ Execução
+---
+
+## 🧠 O que o sistema faz
+
+- Gerencia **pessoas** (Person / User)
+- Atribui **trilhas de treinamento** (Tracks)
+- Avalia desempenho por **assignments e assessments**
+- Calcula **risco agregado**
+- Registra **eventos e auditoria**
+- Cria e acompanha **ações corretivas**
+- Gera **relatórios de risco**
+
+
+## 🧩 Arquitetura
+
+### Backend (NestJS + Prisma)
+- Persons / People
+- Assignments / Assessments
+- Risk Engine
+- Audit & Events
+- Corrective Actions
+- Reports
+
+### Frontend (React)
+- Admin Dashboard
+- Gestão de Pessoas
+- Trilhas
+- Auditoria
+- Relatórios
+
+---
+
+## ▶️ Execução (desenvolvimento)
+
 ```bash
-pnpm run start:full
-pnpm run stop:full
-```
-
-## 🗃️ Migrações
-20251022180213_init
-20251022192019_init_exam
-20251026192955_init
-20251026221957_add_question_answers
-migration_lock.toml
+pnpm dev:api
+pnpm dev:web
