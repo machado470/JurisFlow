@@ -10,15 +10,11 @@ export class ReportsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  /**
-   * Resumo executivo.
-   * NÃO pode quebrar.
-   */
-  async executiveSummary() {
+  async executiveSummary(orgId: string) {
     let people: any[] = []
 
     try {
-      people = await this.risk.listPeopleRisk()
+      people = await this.risk.listPeopleRisk(orgId)
     } catch (err) {
       console.error('[REPORTS] Erro em listPeopleRisk:', err)
       return {
@@ -50,14 +46,11 @@ export class ReportsService {
     return summary
   }
 
-  /**
-   * Pessoas em risco
-   */
-  async peopleAtRisk() {
+  async peopleAtRisk(orgId: string) {
     let people: any[] = []
 
     try {
-      people = await this.risk.listPeopleRisk()
+      people = await this.risk.listPeopleRisk(orgId)
     } catch (err) {
       console.error('[REPORTS] Erro em listPeopleRisk:', err)
       return []
@@ -77,11 +70,11 @@ export class ReportsService {
     })
   }
 
-  /**
-   * ✅ CONFORMIDADE POR TRILHAS (REAL)
-   */
-  async trackCompliance() {
+  async trackCompliance(orgId: string) {
     const assignments = await this.prisma.assignment.findMany({
+      where: {
+        person: { orgId },
+      },
       include: {
         track: true,
       },

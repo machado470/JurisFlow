@@ -8,10 +8,13 @@ export class RiskService {
 
   /**
    * RISCO EDUCACIONAL (snapshot)
-   * Usado por relatórios e dashboards existentes
+   * Escopado por organização
    */
-  async listPeopleRisk() {
+  async listPeopleRisk(orgId: string) {
     const assignments = await this.prisma.assignment.findMany({
+      where: {
+        person: { orgId },
+      },
       include: {
         person: true,
         assessments: true,
@@ -89,7 +92,7 @@ export class RiskService {
 
   /**
    * RISCO REATIVO (event-driven)
-   * Usado por ações corretivas
+   * Mantido sem orgId (chamado com contexto conhecido)
    */
   async recalculatePersonRisk(personId: string) {
     const events = await this.prisma.event.findMany({

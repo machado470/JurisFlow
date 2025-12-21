@@ -5,42 +5,56 @@ import { PrismaService } from '../prisma/prisma.service'
 export class PersonsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
+  findAll(orgId: string) {
     return this.prisma.person.findMany({
+      where: { orgId },
       orderBy: { createdAt: 'desc' },
     })
   }
 
-  findOne(id: string) {
-    return this.prisma.person.findUnique({
-      where: { id },
+  findOne(id: string, orgId: string) {
+    return this.prisma.person.findFirst({
+      where: {
+        id,
+        orgId,
+      },
     })
   }
 
-  create(data: {
-    name: string
-    email?: string
-    role: string
-  }) {
+  create(
+    orgId: string,
+    data: {
+      name: string
+      email?: string
+      role: string
+    },
+  ) {
     return this.prisma.person.create({
       data: {
         name: data.name,
         email: data.email,
         role: data.role,
+        orgId,
       },
     })
   }
 
-  setActive(id: string, active: boolean) {
-    return this.prisma.person.update({
-      where: { id },
+  setActive(id: string, orgId: string, active: boolean) {
+    return this.prisma.person.updateMany({
+      where: {
+        id,
+        orgId,
+      },
       data: { active },
     })
   }
 
-  getAssignments(id: string) {
+  getAssignments(personId: string, orgId: string) {
     return this.prisma.assignment.findMany({
-      where: { personId: id },
+      where: {
+        personId,
+        person: { orgId },
+      },
       include: { track: true },
     })
   }

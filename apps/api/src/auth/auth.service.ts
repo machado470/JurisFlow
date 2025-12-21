@@ -29,6 +29,7 @@ export class AuthService {
       sub: user.id,
       role: user.role,
       personId: user.personId,
+      orgId: user.orgId,
     }
 
     return {
@@ -37,6 +38,7 @@ export class AuthService {
         id: user.id,
         role: user.role,
         personId: user.personId,
+        orgId: user.orgId,
       },
     }
   }
