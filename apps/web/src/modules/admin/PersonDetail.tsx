@@ -1,92 +1,137 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import Card from '../../components/base/Card'
+import PageHeader from '../../components/base/PageHeader'
+import StatusBadge from '../../components/base/StatusBadge'
+import api from '../../services/api'
+
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+type Assignment = {
+  id: string
+  track: { title: string }
+  progress: number
+  risk: RiskLevel
+}
+
+type TimelineItem = {
+  type: string
+  label: string
+  description?: string
+  date: string
+}
+
+function riskTone(risk: RiskLevel) {
+  if (risk === 'CRITICAL') return 'critical'
+  if (risk === 'HIGH' || risk === 'MEDIUM')
+    return 'warning'
+  return 'success'
+}
 
 export default function PersonDetail() {
-  const { id } = useParams()
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const [assignments, setAssignments] =
+    useState<Assignment[]>([])
+  const [timeline, setTimeline] =
+    useState<TimelineItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // 🔒 Mock controlado (depois vem da API)
-  const person = {
-    id,
-    name: 'Ana Silva',
-    email: 'ana@empresa.com',
-    status: 'CRITICO',
-    compliance: 42,
-    pending: 3,
-  }
+  useEffect(() => {
+    async function load() {
+      try {
+        const [a, t] = await Promise.all([
+          api.get(`/persons/${id}/assignments`),
+          api.get(`/persons/${id}/timeline`),
+        ])
+
+        setAssignments(a.data ?? [])
+        setTimeline(t.data ?? [])
+      } catch (err) {
+        console.error('[PersonDetail]', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [id])
 
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho */}
-      <header className="space-y-1">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-slate-500 hover:text-slate-700"
-        >
-          ← Voltar
-        </button>
+    <div className="space-y-10">
+      <PageHeader
+        title="Detalhe da Pessoa"
+        description="Progresso, risco e histórico completo."
+      />
 
-        <h1 className="text-2xl font-semibold">
-          {person.name}
-        </h1>
-        <p className="text-sm text-slate-500">
-          {person.email}
-        </p>
-      </header>
-
-      {/* Indicadores */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <p className="text-sm text-slate-500">
-            Status
-          </p>
-          <strong className="text-xl text-red-600">
-            Crítico
-          </strong>
-        </Card>
-
-        <Card>
-          <p className="text-sm text-slate-500">
-            Conformidade
-          </p>
-          <strong className="text-xl">
-            {person.compliance}%
-          </strong>
-        </Card>
-
-        <Card>
-          <p className="text-sm text-slate-500">
-            Pendências
-          </p>
-          <strong className="text-xl">
-            {person.pending}
-          </strong>
-        </Card>
-      </section>
-
-      {/* Diagnóstico */}
+      {/* Trilhas */}
       <Card>
-        <h3 className="text-lg font-medium mb-2">
-          Diagnóstico
+        <h3 className="font-medium mb-4">
+          Trilhas atribuídas
         </h3>
 
-        <p className="text-sm text-slate-600 leading-relaxed">
-          Esta pessoa apresenta risco crítico devido a baixa
-          taxa de conformidade nas trilhas obrigatórias e
-          pendências não resolvidas. A recomendação é
-          intervenção imediata com ação corretiva formal.
-        </p>
+        {assignments.length === 0 ? (
+          <div className="text-sm opacity-60">
+            Nenhuma trilha atribuída.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {assignments.map(a => (
+              <div
+                key={a.id}
+                className="flex justify-between"
+              >
+                <div>
+                  <div className="font-medium">
+                    {a.track.title}
+                  </div>
+                  <div className="text-xs opacity-70">
+                    Progresso: {a.progress}%
+                  </div>
+                </div>
+
+                <StatusBadge
+                  label={a.risk}
+                  tone={riskTone(a.risk)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
-      {/* Ação */}
+      {/* Timeline */}
       <Card>
-        <h3 className="text-lg font-medium mb-4">
-          Ação corretiva
+        <h3 className="font-medium mb-4">
+          Linha do tempo
         </h3>
 
-        <button className="w-full py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700">
-          Registrar ação corretiva
-        </button>
+        {loading ? (
+          <div className="text-sm opacity-60">
+            Carregando…
+          </div>
+        ) : timeline.length === 0 ? (
+          <div className="text-sm opacity-60">
+            Nenhum evento registrado.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {timeline.map((i, idx) => (
+              <div key={idx}>
+                <div className="text-xs opacity-60">
+                  {new Date(i.date).toLocaleString()}
+                </div>
+                <div className="font-medium">
+                  {i.label}
+                </div>
+                {i.description && (
+                  <div className="text-sm opacity-70">
+                    {i.description}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   )

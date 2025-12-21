@@ -13,11 +13,13 @@ export class ReportsController {
   async executive() {
     const summary = await this.reports.executiveSummary()
     const peopleAtRisk = await this.reports.peopleAtRisk()
+    const trackCompliance = await this.reports.trackCompliance()
 
     return {
       success: true,
       data: {
         summary,
+        trackCompliance,
         peopleAtRisk,
         generatedAt: new Date(),
       },

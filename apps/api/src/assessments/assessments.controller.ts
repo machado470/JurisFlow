@@ -1,28 +1,25 @@
-import { Controller, Post, Body, Req } from '@nestjs/common'
+import { Controller, Post, Body } from '@nestjs/common'
 import { AssessmentsService } from './assessments.service'
 
 @Controller('assessments')
 export class AssessmentsController {
   constructor(
-    private assessments: AssessmentsService,
+    private readonly service: AssessmentsService,
   ) {}
 
+  /**
+   * Avaliação mínima (MVP)
+   */
   @Post()
-  create(
-    @Req() req: any,
+  async submit(
     @Body()
     body: {
       assignmentId: string
+      personId: string
       score: number
       notes?: string
     },
   ) {
-    return this.assessments.create({
-      assignmentId: body.assignmentId,
-      score: body.score,
-      notes: body.notes,
-      personId: req.user.personId,
-    })
+    return this.service.create(body)
   }
 }
-

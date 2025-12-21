@@ -1,98 +1,66 @@
 import Card from '../../components/base/Card'
-import { useExecutiveDashboard } from '../../hooks/useExecutiveDashboard'
 import { useNavigate } from 'react-router-dom'
 
 export default function AdminDashboard() {
-  const { stats } = useExecutiveDashboard()
   const navigate = useNavigate()
 
   return (
     <div className="space-y-10">
-      {/* Cabeçalho executivo */}
-      <header className="space-y-2">
+      {/* Cabeçalho */}
+      <header className="space-y-1">
         <h1 className="text-3xl font-semibold">
-          Visão Executiva
+          Painel Administrativo
         </h1>
         <p className="text-sm text-slate-500 max-w-2xl">
-          Panorama atual de risco humano e conformidade do
-          escritório. Priorize ações corretivas antes que
-          riscos se tornem passivos jurídicos.
+          Acompanhe a situação do escritório e execute ações
+          estratégicas com base em dados reais do sistema.
         </p>
       </header>
 
-      {/* KPIs principais */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <p className="text-sm text-slate-500">
-            Pessoas monitoradas
-          </p>
-          <strong className="text-4xl font-semibold">
-            {stats.people}
-          </strong>
-        </Card>
-
-        <Card>
-          <p className="text-sm text-slate-500">
-            Risco crítico
-          </p>
-          <strong className="text-4xl font-semibold text-red-600">
-            {stats.critical}
-          </strong>
-        </Card>
-
-        <Card>
-          <p className="text-sm text-slate-500">
-            Em atenção
-          </p>
-          <strong className="text-4xl font-semibold text-amber-600">
-            {stats.attention}
-          </strong>
-        </Card>
-
-        <Card>
-          <p className="text-sm text-slate-500">
-            Conformidade média
-          </p>
-          <strong className="text-4xl font-semibold text-emerald-600">
-            {stats.complianceAvg}%
-          </strong>
-        </Card>
-      </section>
-
-      {/* Bloco estratégico */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Estado do sistema */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <h3 className="text-lg font-medium mb-2">
-            Leitura executiva
+            Situação geral
           </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Há colaboradores classificados como risco crítico
-            e em atenção. A recomendação é priorizar ações
-            corretivas imediatas para reduzir exposição e
-            elevar a conformidade geral da equipe.
+          <p className="text-sm text-slate-600">
+            Os indicadores de risco, conformidade e auditoria
+            são calculados automaticamente a partir das
+            avaliações realizadas.
           </p>
         </Card>
 
         <Card>
-          <h3 className="text-lg font-medium mb-4">
-            Próxima ação recomendada
+          <h3 className="text-lg font-medium mb-2">
+            Próxima ação
           </h3>
+          <p className="text-sm text-slate-600 mb-4">
+            Revise os relatórios executivos para identificar
+            pessoas e áreas que exigem atenção imediata.
+          </p>
 
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate('/admin/people')}
-              className="w-full py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
-            >
-              Ver pessoas em risco
-            </button>
+          <button
+            onClick={() => navigate('/admin/reports')}
+            className="w-full py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Abrir relatórios
+          </button>
+        </Card>
 
-            <button
-              onClick={() => navigate('/admin/tracks')}
-              className="w-full py-3 rounded-lg border text-slate-700 hover:bg-slate-50"
-            >
-              Revisar trilhas críticas
-            </button>
-          </div>
+        <Card>
+          <h3 className="text-lg font-medium mb-2">
+            Estrutura educacional
+          </h3>
+          <p className="text-sm text-slate-600 mb-4">
+            Gerencie trilhas, conteúdos e avaliações da equipe.
+          </p>
+
+          <button
+            onClick={() => navigate('/admin/tracks')}
+            className="w-full py-2 rounded border hover:bg-slate-50"
+          >
+            Gerenciar trilhas
+          </button>
         </Card>
       </section>
     </div>

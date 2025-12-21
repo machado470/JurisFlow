@@ -1,119 +1,97 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/base/Card'
-import {
-  usePeopleRisk,
-  PersonInput,
-} from '../../hooks/usePeopleRisk'
+import PageHeader from '../../components/base/PageHeader'
+import StatusBadge from '../../components/base/StatusBadge'
+import api from '../../services/api'
 
-const DATA: PersonInput[] = [
-  {
-    id: '1',
-    name: 'Ana Silva',
-    email: 'ana@empresa.com',
-    compliance: 42,
-    pending: 3,
-  },
-  {
-    id: '2',
-    name: 'Carlos Souza',
-    email: 'carlos@empresa.com',
-    compliance: 68,
-    pending: 1,
-  },
-  {
-    id: '3',
-    name: 'Marina Lopes',
-    email: 'marina@empresa.com',
-    compliance: 100,
-    pending: 0,
-  },
-]
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
-function StatusBadge({ status }: { status: any }) {
-  const map = {
-    APTO: 'bg-emerald-100 text-emerald-700',
-    ATENCAO: 'bg-amber-100 text-amber-700',
-    CRITICO: 'bg-red-100 text-red-700',
-  }
+type PersonAtRisk = {
+  personId: string
+  name: string
+  email?: string
+  risk: RiskLevel
+  progress: number
+}
 
-  const label = {
-    APTO: 'Apto',
-    ATENCAO: 'Em atenção',
-    CRITICO: 'Crítico',
-  }
-
-  return (
-    <span
-      className={`text-xs font-medium px-2 py-1 rounded ${map[status]}`}
-    >
-      {label[status]}
-    </span>
-  )
+function riskTone(risk: RiskLevel) {
+  if (risk === 'CRITICAL') return 'critical'
+  if (risk === 'HIGH') return 'warning'
+  if (risk === 'MEDIUM') return 'warning'
+  return 'success'
 }
 
 export default function People() {
+  const [loading, setLoading] = useState(true)
+  const [people, setPeople] = useState<PersonAtRisk[]>([])
   const navigate = useNavigate()
-  const people = usePeopleRisk(DATA)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await api.get('/reports/executive')
+        setPeople(res.data.data.peopleAtRisk ?? [])
+      } catch (err) {
+        console.error('[People]', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [])
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            Pessoas
-          </h1>
-          <p className="text-sm text-slate-500">
-            Monitoramento de risco humano
-          </p>
-        </div>
-
-        <button className="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-500">
-          Adicionar pessoa
-        </button>
-      </header>
+      <PageHeader
+        title="Pessoas"
+        description="Lista de colaboradores com base no risco educacional e progresso nas trilhas."
+      />
 
       <Card>
-        <table className="w-full text-sm">
-          <thead className="text-left text-slate-500">
-            <tr>
-              <th>Status</th>
-              <th>Pessoa</th>
-              <th>Conformidade</th>
-              <th>Pendências</th>
-              <th></th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y">
+        {loading ? (
+          <div className="text-sm opacity-60">
+            Carregando dados…
+          </div>
+        ) : people.length === 0 ? (
+          <div className="text-sm opacity-60">
+            Nenhuma pessoa em risco no momento.
+          </div>
+        ) : (
+          <div className="space-y-3">
             {people.map(p => (
-              <tr
-                key={p.id}
-                onClick={() => navigate(`/admin/people/${p.id}`)}
-                className="h-14 cursor-pointer hover:bg-slate-50 transition"
+              <button
+                key={p.personId}
+                onClick={() =>
+                  navigate(`/admin/people/${p.personId}`)
+                }
+                className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition text-left"
               >
-                <td>
-                  <StatusBadge status={p.status} />
-                </td>
-
-                <td>
+                <div>
                   <div className="font-medium">
                     {p.name}
                   </div>
-                  <div className="text-xs text-slate-500">
-                    {p.email}
+                  {p.email && (
+                    <div className="text-xs opacity-70">
+                      {p.email}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-xs opacity-60">
+                    {p.progress}%
                   </div>
-                </td>
-
-                <td>{p.compliance}%</td>
-                <td>{p.pending}</td>
-
-                <td className="text-right text-slate-400">
-                  Ver detalhes →
-                </td>
-              </tr>
+                  <StatusBadge
+                    label={p.risk}
+                    tone={riskTone(p.risk)}
+                  />
+                </div>
+              </button>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
       </Card>
     </div>
   )

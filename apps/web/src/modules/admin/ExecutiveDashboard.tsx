@@ -1,62 +1,45 @@
+import { useEffect, useState } from 'react'
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
 import UserAvatar from '../../components/UserAvatar'
 import StatusBadge from '../../components/base/StatusBadge'
 import { Link } from 'react-router-dom'
-import {
-  calculateRiskFromTracks,
-  type RiskLevel,
-} from '../../services/risk'
+import { getExecutiveReport } from '../../services/reports'
 
-type Track = {
-  id: string
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+type PersonAtRisk = {
+  personId: string
   name: string
+  email?: string
+  risk: RiskLevel
   progress: number
 }
 
-type Person = {
-  id: string
-  name: string
-  role: string
-  tracks: Track[]
-}
-
-const people: Person[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    role: 'Advogado',
-    tracks: [{ id: 't1', name: 'LGPD', progress: 45 }],
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    role: 'Assistente Jurídica',
-    tracks: [{ id: 't2', name: 'Compliance', progress: 75 }],
-  },
-  {
-    id: '3',
-    name: 'Carlos Lima',
-    role: 'Sócio',
-    tracks: [{ id: 't3', name: 'Governança', progress: 100 }],
-  },
-]
-
 function riskTone(risk: RiskLevel) {
-  if (risk === 'CRÍTICO') return 'critical'
-  if (risk === 'ATENÇÃO') return 'warning'
+  if (risk === 'CRITICAL') return 'critical'
+  if (risk === 'HIGH') return 'warning'
   return 'success'
 }
 
 export default function ExecutiveDashboard() {
-  const peopleWithRisk = people.map(person => ({
-    ...person,
-    risk: calculateRiskFromTracks(person.tracks),
-  }))
+  const [loading, setLoading] = useState(true)
+  const [people, setPeople] = useState<PersonAtRisk[]>([])
 
-  const peopleNeedingAttention = peopleWithRisk.filter(
-    p => p.risk !== 'OK'
-  )
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getExecutiveReport('default')
+        setPeople(res.data.peopleAtRisk ?? [])
+      } catch (err) {
+        console.error('[ExecutiveDashboard]', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -70,15 +53,19 @@ export default function ExecutiveDashboard() {
           Pessoas que exigem atenção
         </h2>
 
-        {peopleNeedingAttention.length === 0 ? (
+        {loading ? (
           <div className="text-sm opacity-60">
-            Nenhum colaborador em risco no momento.
+            Carregando dados reais…
+          </div>
+        ) : people.length === 0 ? (
+          <div className="text-sm opacity-60">
+            Nenhuma pessoa em risco no momento.
           </div>
         ) : (
           <div className="space-y-4">
-            {peopleNeedingAttention.map(person => (
+            {people.map(person => (
               <div
-                key={person.id}
+                key={person.personId}
                 className="flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
@@ -88,9 +75,11 @@ export default function ExecutiveDashboard() {
                     <div className="font-medium">
                       {person.name}
                     </div>
-                    <div className="text-sm opacity-70">
-                      {person.role}
-                    </div>
+                    {person.email && (
+                      <div className="text-sm opacity-70">
+                        {person.email}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -101,7 +90,7 @@ export default function ExecutiveDashboard() {
                   />
 
                   <Link
-                    to={`/admin/people/${person.id}`}
+                    to={`/admin/people/${person.personId}`}
                     className="text-sm text-blue-400 hover:underline"
                   >
                     Ver →
