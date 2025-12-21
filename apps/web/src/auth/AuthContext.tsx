@@ -4,24 +4,22 @@ import {
   useEffect,
   useState,
 } from 'react'
-import api from '../services/api'
 
 type User = {
   id: string
+  email: string
   role: 'ADMIN' | 'COLLABORATOR'
-  personId?: string
 }
 
 type AuthContextType = {
   user: User | null
   token: string | null
-  login: (email: string, password: string) => Promise<void>
+  ready: boolean
+  login: (data: { user: User; token: string }) => void
   logout: () => void
 }
 
-const AuthContext = createContext<AuthContextType>(
-  {} as AuthContextType,
-)
+const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({
   children,
@@ -30,42 +28,36 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token')
-    const savedUser = localStorage.getItem('user')
+    const stored = localStorage.getItem('auth')
 
-    if (savedToken && savedUser) {
-      setToken(savedToken)
-      setUser(JSON.parse(savedUser))
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      setUser(parsed.user)
+      setToken(parsed.token)
     }
+
+    // 🔑 SEMPRE libera render
+    setReady(true)
   }, [])
 
-  async function login(email: string, password: string) {
-    const res = await api.post('/auth/login', {
-      email,
-      password,
-    })
-
-    const { token, user } = res.data
-
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
-
-    setToken(token)
-    setUser(user)
+  function login(data: { user: User; token: string }) {
+    setUser(data.user)
+    setToken(data.token)
+    localStorage.setItem('auth', JSON.stringify(data))
   }
 
   function logout() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setToken(null)
     setUser(null)
+    setToken(null)
+    localStorage.removeItem('auth')
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout }}
+      value={{ user, token, ready, login, logout }}
     >
       {children}
     </AuthContext.Provider>
@@ -73,5 +65,11 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  return useContext(AuthContext)
+  const ctx = useContext(AuthContext)
+  if (!ctx) {
+    throw new Error(
+      'useAuth must be used within AuthProvider'
+    )
+  }
+  return ctx
 }

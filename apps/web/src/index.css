@@ -2,28 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Tema via CSS variables ===== */
-
-:root {
-  --bg: #ffffff;
-  --text: #09090b;
-  --card: #f4f4f5;
-  --border: #e4e4e7;
-}
-
-.dark {
-  --bg: #09090b;
-  --text: #fafafa;
-  --card: #18181b;
-  --border: #27272a;
-}
-
+/* 
+  O fundo do sistema é controlado exclusivamente
+  pelo ThemeProvider.
+*/
 body {
-  background-color: var(--bg);
-  color: var(--text);
-}
-
-.card {
-  background-color: var(--card);
-  border: 1px solid var(--border);
+  @apply text-zinc-900;
 }

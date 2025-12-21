@@ -1,22 +1,28 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { themes } from './themes'
-
-export type ThemeName = 'dark' | 'light'
+import { createContext, useEffect, useState } from 'react'
+import { themes, ThemeName } from './themes'
 
 type ThemeContextType = {
   theme: ThemeName
   setTheme: (t: ThemeName) => void
-  styles: any
+  styles: (typeof themes)['blue']
 }
 
-const ThemeContext = createContext<ThemeContextType | null>(null)
+export const ThemeContext =
+  createContext<ThemeContextType | null>(null)
 
-export function ThemeProvider({ children }: { children: any }) {
-  const [theme, setTheme] = useState<ThemeName>('dark')
+export function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [theme, setTheme] = useState<ThemeName>('blue')
 
   useEffect(() => {
-    document.body.classList.remove('dark', 'light')
-    document.body.classList.add(theme)
+    document.documentElement.classList.remove(
+      'blue',
+      'offwhite'
+    )
+    document.documentElement.classList.add(theme)
   }, [theme])
 
   return (
@@ -27,15 +33,9 @@ export function ThemeProvider({ children }: { children: any }) {
         styles: themes[theme],
       }}
     >
-      {children}
+      <div className={`${themes[theme].bg} min-h-screen`}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   )
-}
-
-export function useTheme() {
-  const ctx = useContext(ThemeContext)
-  if (!ctx) {
-    throw new Error('useTheme must be used within ThemeProvider')
-  }
-  return ctx
 }

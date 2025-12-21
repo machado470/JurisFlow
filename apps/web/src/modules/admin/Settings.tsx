@@ -1,56 +1,18 @@
-import Card from '../../components/ui/Card'
-import { useTheme } from '../../theme/ThemeContext'
-import type { ThemeName } from '../../theme/ThemeContext'
-import clsx from 'clsx'
-
-const themes: { id: ThemeName; label: string }[] = [
-  { id: 'light', label: 'Claro' },
-  { id: 'dark', label: 'Escuro' },
-  { id: 'blue', label: 'Azul' },
-]
-
 export default function Settings() {
-  const { theme, setTheme, tokens } = useTheme()
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">
         Configurações
       </h1>
 
-      <Card title="Tema do sistema">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {themes.map(t => {
-            const active = theme === t.id
+      <p className="opacity-70 max-w-2xl">
+        Ajustes gerais do sistema, preferências visuais,
+        regras de risco e parâmetros do escritório.
+      </p>
 
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
-                className={clsx(
-                  'rounded-lg border px-4 py-3 text-left transition-all',
-                  active
-                    ? 'font-medium'
-                    : 'opacity-80 hover:opacity-100'
-                )}
-                style={{
-                  backgroundColor: active
-                    ? tokens.accent + '22'
-                    : tokens.card,
-                  borderColor: active
-                    ? tokens.accent
-                    : tokens.border + '88',
-                  color: active
-                    ? tokens.accent
-                    : tokens.text,
-                }}
-              >
-                {t.label}
-              </button>
-            )
-          })}
-        </div>
-      </Card>
+      <div className="rounded-lg border p-6 opacity-60">
+        Módulo em construção.
+      </div>
     </div>
   )
 }

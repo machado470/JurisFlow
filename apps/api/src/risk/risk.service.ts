@@ -1,34 +1,14 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { RiskLevel } from '@prisma/client'
-import { AuditService } from '../audit/audit.service'
 
 @Injectable()
 export class RiskService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
-  ) {}
-
-  calculateRisk(params: {
-    progress: number
-    averageScore?: number
-  }): RiskLevel {
-    const { progress, averageScore } = params
-
-    if (progress < 30) return RiskLevel.CRITICAL
-    if (progress < 60) return RiskLevel.HIGH
-
-    if (averageScore !== undefined) {
-      if (averageScore < 50) return RiskLevel.HIGH
-      if (averageScore < 70) return RiskLevel.MEDIUM
-    }
-
-    return RiskLevel.LOW
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Lista pessoas com risco agregado a partir das assignments
+   * RISCO EDUCACIONAL (snapshot)
+   * Usado por relatórios e dashboards existentes
    */
   async listPeopleRisk() {
     const assignments = await this.prisma.assignment.findMany({
@@ -49,7 +29,7 @@ export class RiskService {
             )
           : undefined
 
-      const risk = this.calculateRisk({
+      const risk = this.calculateEducationalRisk({
         progress: a.progress,
         averageScore: avgScore,
       })
@@ -71,13 +51,13 @@ export class RiskService {
           (current.progress + a.progress) / 2,
         )
 
-        // mantém o pior risco
         const order = [
           RiskLevel.LOW,
           RiskLevel.MEDIUM,
           RiskLevel.HIGH,
           RiskLevel.CRITICAL,
         ]
+
         if (
           order.indexOf(risk) >
           order.indexOf(current.risk)
@@ -88,5 +68,54 @@ export class RiskService {
     }
 
     return Array.from(byPerson.values())
+  }
+
+  private calculateEducationalRisk(params: {
+    progress: number
+    averageScore?: number
+  }): RiskLevel {
+    const { progress, averageScore } = params
+
+    if (progress < 30) return RiskLevel.CRITICAL
+    if (progress < 60) return RiskLevel.HIGH
+
+    if (averageScore !== undefined) {
+      if (averageScore < 50) return RiskLevel.HIGH
+      if (averageScore < 70) return RiskLevel.MEDIUM
+    }
+
+    return RiskLevel.LOW
+  }
+
+  /**
+   * RISCO REATIVO (event-driven)
+   * Usado por ações corretivas
+   */
+  async recalculatePersonRisk(personId: string) {
+    const events = await this.prisma.event.findMany({
+      where: { personId },
+    })
+
+    let score = 0
+
+    for (const event of events) {
+      if (event.type === 'CORRECTIVE_ACTION_CREATED') {
+        score += 20
+      }
+
+      if (event.type === 'CORRECTIVE_ACTION_RESOLVED') {
+        score -= 20
+      }
+    }
+
+    if (score < 0) score = 0
+    if (score > 100) score = 100
+
+    await this.prisma.person.update({
+      where: { id: personId },
+      data: { riskScore: score },
+    })
+
+    return score
   }
 }

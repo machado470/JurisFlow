@@ -4,9 +4,22 @@ const api = axios.create({
   baseURL: 'http://localhost:3001',
 })
 
-// 🔐 Interceptor de request → injeta token automaticamente
+// 🔐 Interceptor de request
 api.interceptors.request.use(
   (config) => {
+    /**
+     * ❗️IMPORTANTE
+     * Não enviar token em rotas públicas
+     */
+    const publicRoutes = ['/auth/login']
+
+    if (
+      config.url &&
+      publicRoutes.some(route => config.url?.includes(route))
+    ) {
+      return config
+    }
+
     const token = localStorage.getItem('token')
 
     if (token) {
@@ -19,13 +32,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// 🚨 Interceptor de response → tratamento global
+// 🚨 Interceptor de response
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       console.warn('⚠️ Token inválido ou expirado')
-      // futuro: redirect para /login
+      // aqui futuramente: redirect para /login
     }
 
     return Promise.reject(error)

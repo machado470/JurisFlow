@@ -1,93 +1,55 @@
-import { NavLink } from 'react-router-dom'
-import { useTheme } from '../theme/ThemeContext'
-import { useAuthContext } from '../auth/AuthContext'
-import clsx from 'clsx'
-
-type Item = {
-  label: string
-  to: string
-}
-
-const items: Item[] = [
-  { label: 'Dashboard', to: '/admin' },
-  { label: 'Trilhas', to: '/admin/tracks' },
-  { label: 'Pessoas', to: '/admin/people' },
-  { label: 'Auditoria', to: '/admin/audit' },
-  { label: 'Configurações', to: '/admin/settings' },
-]
+import { useTheme } from '../theme/ThemeProvider'
+import {
+  LayoutDashboard,
+  Users,
+  Layers,
+  FileText,
+} from 'lucide-react'
+import SidebarItem from './SidebarItem'
+import UserMenu from '../components/UserMenu'
 
 export default function AdminSidebar() {
-  const { tokens } = useTheme()
-  const { user } = useAuthContext()
+  const { styles } = useTheme()
 
   return (
     <aside
-      className="flex h-full w-64 flex-col border-r"
-      style={{
-        backgroundColor: tokens.sidebarBg,
-        borderColor: tokens.border + '88',
-        color: tokens.text,
-      }}
+      className={`
+        fixed
+        inset-y-0
+        left-0
+        w-64
+        ${styles.surfaceStrong}
+        ${styles.border}
+        border-r
+        px-4
+        py-6
+        flex
+        flex-col
+        gap-8
+        z-40
+      `}
     >
-      {/* Header */}
-      <div
-        className="px-5 py-6 border-b"
-        style={{
-          borderColor: tokens.border + '88',
-        }}
-      >
+      {/* Marca */}
+      <div className="px-2">
         <div className="text-lg font-semibold tracking-tight">
           JurisFlow
         </div>
-
-        {user && (
-          <div
-            className="mt-1 text-sm"
-            style={{ color: tokens.textMuted }}
-          >
-            {user.name}
-          </div>
-        )}
+        <div className="text-xs opacity-50">
+          Gestão de risco jurídico
+        </div>
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {items.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end
-            className={({ isActive }) =>
-              clsx(
-                'block rounded-lg px-3 py-2 text-sm transition-all',
-                isActive
-                  ? 'font-medium'
-                  : 'opacity-80 hover:opacity-100'
-              )
-            }
-            style={({ isActive }) => ({
-              backgroundColor: isActive
-                ? tokens.accent + '22'
-                : 'transparent',
-              color: isActive
-                ? tokens.accent
-                : tokens.text,
-            })}
-          >
-            {item.label}
-          </NavLink>
-        ))}
+      {/* Navegação */}
+      <nav className="flex flex-col gap-1">
+        <SidebarItem to="/admin/dashboard" label="Dashboard" icon={LayoutDashboard} />
+        <SidebarItem to="/admin/people" label="Pessoas" icon={Users} />
+        <SidebarItem to="/admin/tracks" label="Trilhas" icon={Layers} />
+        <SidebarItem to="/admin/reports" label="Relatórios" icon={FileText} />
       </nav>
 
-      {/* Footer */}
-      <div
-        className="border-t px-5 py-4 text-xs"
-        style={{
-          borderColor: tokens.border + '88',
-          color: tokens.textMuted,
-        }}
-      >
-        JurisFlow • v1
+      {/* Usuário (integrado, não rodapé morto) */}
+      <div className="mt-6 pt-4 border-t border-white/10">
+        <UserMenu />
       </div>
     </aside>
   )

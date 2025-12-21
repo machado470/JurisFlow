@@ -1,63 +1,30 @@
-export type ThemeName = 'dark' | 'blue' | 'offwhite'
+export type ThemeName = 'blue' | 'offwhite'
 
-export const themes = {
-  dark: {
-    name: 'dark',
-    bg: 'bg-black',
-    surface: 'bg-black/40',
-    border: 'border-white/20',
-    text: 'text-white',
-    muted: 'text-white/60',
-
-    danger: 'text-red-600',
-    warning: 'text-amber-500',
-    success: 'text-green-500',
-
-    chart: {
-      primary: '#fbbf24',
-      success: '#22c55e',
-      warning: '#f59e0b',
-      danger: '#ef4444',
-    },
-  },
-
+export const themes: Record<
+  ThemeName,
+  {
+    bg: string
+    surface: string
+    border: string
+    text: string
+    muted: string
+  }
+> = {
   blue: {
-    name: 'blue',
-    bg: 'bg-slate-900',
-    surface: 'bg-slate-800/60',
-    border: 'border-slate-600',
-    text: 'text-white',
-    muted: 'text-slate-300',
-
-    danger: 'text-red-500',
-    warning: 'text-orange-400',
-    success: 'text-emerald-400',
-
-    chart: {
-      primary: '#60a5fa',
-      success: '#34d399',
-      warning: '#fbbf24',
-      danger: '#f87171',
-    },
+    bg: 'bg-gradient-to-br from-[#0c1f2f] via-[#081624] to-[#050c14]',
+    surface:
+      'bg-[#0f2438]/70 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]',
+    border: 'border-white/10',
+    text: 'text-slate-100',
+    muted: 'text-slate-400',
   },
 
   offwhite: {
-    name: 'offwhite',
-    bg: 'bg-[#f7f4ee]',
-    surface: 'bg-white',
+    bg: 'bg-gradient-to-br from-[#f6f3ec] via-[#efeadd] to-[#e6dfd2]',
+    surface:
+      'bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]',
     border: 'border-black/10',
-    text: 'text-black',
-    muted: 'text-black/60',
-
-    danger: 'text-red-700',
-    warning: 'text-amber-600',
-    success: 'text-green-700',
-
-    chart: {
-      primary: '#2563eb',
-      success: '#16a34a',
-      warning: '#d97706',
-      danger: '#dc2626',
-    },
+    text: 'text-slate-900',
+    muted: 'text-slate-500',
   },
 }

@@ -26,12 +26,22 @@ model Person {
   role   String
   active Boolean @default(true)
 
-  // 🔐 vínculo opcional com login
+  // 🔥 risco agregado reagente a eventos
+  riskScore Int @default(0)
+
+  // vínculo opcional com login
   user User?
 
+  // domínio educacional
   assignments Assignment[]
   assessments Assessment[]
+
+  // auditoria e histórico
   auditEvents AuditEvent[]
+  events      Event[]
+
+  // ações corretivas
+  correctiveActions CorrectiveAction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -43,7 +53,6 @@ model User {
   password String
   role     UserRole
 
-  // vínculo com a pessoa avaliada (colaborador)
   personId String? @unique
   person   Person? @relation(fields: [personId], references: [id])
 
@@ -109,4 +118,29 @@ model AuditEvent {
   person Person? @relation(fields: [personId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  type        String
+  severity    String?
+  description String?
+  metadata    Json?
+
+  personId String
+  person   Person @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model CorrectiveAction {
+  id     String @id @default(uuid())
+  reason String
+  status String @default("OPEN")
+
+  personId String
+  person   Person @relation(fields: [personId], references: [id])
+
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
 }

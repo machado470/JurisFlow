@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import Card from '../components/ui/Card'
+import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
   const { login } = useAuth()
@@ -9,53 +8,48 @@ export default function Login() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
 
-    try {
-      await login(email, password)
-      navigate('/admin')
-    } catch {
-      setError('Credenciais inválidas')
-    }
+    // mock temporário
+    login('fake-token', {
+      id: '1',
+      role: 'ADMIN',
+    })
+
+    navigate('/admin')
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Card title="JurisFlow">
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
-          <input
-            className="w-full p-2 rounded bg-black/30"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
+    <div className="min-h-screen flex items-center justify-center">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-sm space-y-4 border rounded-lg p-6"
+      >
+        <h1 className="text-xl font-bold text-center">
+          JurisFlow
+        </h1>
 
-          <input
-            type="password"
-            className="w-full p-2 rounded bg-black/30"
-            placeholder="Senha"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="w-full border rounded px-3 py-2"
+        />
 
-          {error && (
-            <p className="text-sm text-red-400">
-              {error}
-            </p>
-          )}
+        <input
+          type="password"
+          placeholder="Senha"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          className="w-full border rounded px-3 py-2"
+        />
 
-          <button className="w-full py-2 bg-blue-600 rounded">
-            Entrar
-          </button>
-        </form>
-      </Card>
+        <button className="w-full bg-blue-600 text-white py-2 rounded">
+          Entrar
+        </button>
+      </form>
     </div>
   )
 }

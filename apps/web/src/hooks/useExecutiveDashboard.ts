@@ -1,75 +1,79 @@
-import { useEffect, useState } from 'react'
-import { DEMO_MODE } from '../config/demo'
-import { api } from '../services/api'
-
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-type PersonAtRisk = {
-  personId: string
-  name: string
-  email: string
-  risk: RiskLevel
-  progress: number
-  assignments: number
-}
+import { useMemo } from 'react'
+import {
+  usePeopleRisk,
+  PersonInput,
+} from './usePeopleRisk'
 
 type ExecutiveStats = {
-  totalPeople: number
+  people: number
   critical: number
-  high: number
-  medium: number
-  low: number
+  attention: number
+  compliant: number
+  complianceAvg: number
 }
 
+// 🔒 Fonte única (por enquanto mock; depois vem da API)
+const PEOPLE_DATA: PersonInput[] = [
+  {
+    id: '1',
+    name: 'Ana Silva',
+    email: 'ana@empresa.com',
+    compliance: 42,
+    pending: 3,
+  },
+  {
+    id: '2',
+    name: 'Carlos Souza',
+    email: 'carlos@empresa.com',
+    compliance: 68,
+    pending: 1,
+  },
+  {
+    id: '3',
+    name: 'Marina Lopes',
+    email: 'marina@empresa.com',
+    compliance: 100,
+    pending: 0,
+  },
+]
+
 export function useExecutiveDashboard() {
-  const [stats, setStats] = useState<ExecutiveStats | null>(null)
-  const [peopleAtRisk, setPeopleAtRisk] = useState<PersonAtRisk[]>([])
-  const [loading, setLoading] = useState(true)
-  const [mode, setMode] = useState<'demo' | 'live'>('demo')
+  const people = usePeopleRisk(PEOPLE_DATA)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true)
+  const stats = useMemo<ExecutiveStats>(() => {
+    const total = people.length
 
-        // 🧪 DEMO MODE (mantém comportamento atual)
-        if (DEMO_MODE) {
-          const demo = await import('../demo/executive-demo')
-          setStats(demo.stats)
-          setPeopleAtRisk(demo.peopleAtRisk)
-          setMode('demo')
-          return
-        }
+    const critical = people.filter(
+      p => p.status === 'CRITICO'
+    ).length
 
-        // 🚀 LIVE MODE (backend real)
-        const res = await api.get('/reports/executive')
+    const attention = people.filter(
+      p => p.status === 'ATENCAO'
+    ).length
 
-        const data = res.data.data
+    const compliant = people.filter(
+      p => p.status === 'APTO'
+    ).length
 
-        setStats({
-          totalPeople: data.summary.totalPeople,
-          critical: data.summary.critical,
-          high: data.summary.high,
-          medium: data.summary.medium,
-          low: data.summary.low,
-        })
+    const complianceAvg =
+      Math.round(
+        people.reduce(
+          (sum, p) => sum + p.compliance,
+          0
+        ) / total
+      ) || 0
 
-        setPeopleAtRisk(data.peopleAtRisk)
-        setMode('live')
-      } catch (err) {
-        console.error('Erro ao carregar dashboard executivo', err)
-      } finally {
-        setLoading(false)
-      }
+    return {
+      people: total,
+      critical,
+      attention,
+      compliant,
+      complianceAvg,
     }
-
-    load()
-  }, [])
+  }, [people])
 
   return {
     stats,
-    peopleAtRisk,
-    loading,
-    mode,
+    mode: 'real' as const,
   }
 }

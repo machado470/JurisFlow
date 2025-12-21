@@ -1,16 +1,14 @@
-import { ThemeName, themes } from '../theme'
-
-const STORAGE_KEY = 'jurisflow:theme'
+import { useContext } from 'react'
+import { ThemeContext } from '../theme/ThemeProvider'
 
 export function useTheme() {
-  function get() {
-    const saved = localStorage.getItem(STORAGE_KEY) as ThemeName
-    return themes[saved] ?? themes.institutional
+  const ctx = useContext(ThemeContext)
+
+  if (!ctx) {
+    throw new Error(
+      'useTheme must be used within ThemeProvider'
+    )
   }
 
-  function set(name: ThemeName) {
-    localStorage.setItem(STORAGE_KEY, name)
-  }
-
-  return { get, set }
+  return ctx
 }

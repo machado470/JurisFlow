@@ -1,21 +1,33 @@
-import { ReactNode } from 'react'
+import { Outlet } from 'react-router-dom'
+import { ThemeProvider, useTheme } from '../theme/ThemeProvider'
 import AdminSidebar from './AdminSidebar'
-import { useTheme } from '../theme/ThemeContext'
+import ThemeSwitcher from '../components/ThemeSwitcher'
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { tokens } = useTheme()
+function AdminShell() {
+  const { styles } = useTheme()
 
   return (
-    <div className="flex min-h-screen">
+    <div className={`min-h-screen ${styles.bg}`}>
       <AdminSidebar />
 
-      <main
-        className="flex-1 overflow-auto p-6"
-        style={{ backgroundColor: tokens.surface }}
-      >
-        {children}
-      </main>
+      <div className="pl-64 min-h-screen flex flex-col">
+        <header className={`${styles.surface} border-b px-8 h-16 flex items-center justify-between`}>
+          <span className="font-semibold">JurisFlow</span>
+          <ThemeSwitcher />
+        </header>
+
+        <main className="flex-1 p-10">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
 
+export default function AdminLayout() {
+  return (
+    <ThemeProvider>
+      <AdminShell />
+    </ThemeProvider>
+  )
+}

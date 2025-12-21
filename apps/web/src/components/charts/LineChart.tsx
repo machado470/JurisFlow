@@ -15,6 +15,14 @@ export function LineChart({ title, data, labels }: Props) {
 
   const max = Math.max(...data)
 
+  const points = data
+    .map((value, index) => {
+      const x = (index / (data.length - 1)) * 100
+      const y = 40 - (value / max) * 32 - 2
+      return `${x},${y}`
+    })
+    .join(' ')
+
   return (
     <div className="space-y-3">
       {title && (
@@ -23,24 +31,40 @@ export function LineChart({ title, data, labels }: Props) {
         </h3>
       )}
 
-      <svg viewBox="0 0 100 40" className="w-full h-28">
+      <svg
+        viewBox="0 0 100 40"
+        className="w-full h-28"
+      >
+        {/* baseline */}
+        <line
+          x1="0"
+          y1="38"
+          x2="100"
+          y2="38"
+          stroke="currentColor"
+          strokeOpacity="0.1"
+        />
+
+        {/* curva */}
         <polyline
           fill="none"
           stroke={styles.chart.primary}
-          strokeWidth="2"
+          strokeWidth="1.5"
           strokeLinejoin="round"
           strokeLinecap="round"
-          points={data
-            .map((value, index) => {
-              const x = (index / (data.length - 1)) * 100
-              const y = 40 - (value / max) * 36
-              return `${x},${y}`
-            })
-            .join(' ')}
+          points={points}
         />
       </svg>
 
-      <div className={`flex justify-between text-xs ${styles.muted}`}>
+      <div
+        className={`
+          flex
+          justify-between
+          text-xs
+          ${styles.muted}
+          opacity-70
+        `}
+      >
         {labels.map(label => (
           <span key={label}>{label}</span>
         ))}
