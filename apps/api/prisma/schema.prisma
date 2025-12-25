@@ -50,6 +50,7 @@ model Person {
   events      Event[]
 
   correctiveActions CorrectiveAction[]
+  riskSnapshots     RiskSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -58,8 +59,12 @@ model Person {
 model User {
   id       String   @id @default(uuid())
   email    String   @unique
-  password String
+  password String?
   role     UserRole
+
+  active          Boolean  @default(false)
+  inviteToken     String?  @unique
+  inviteExpiresAt DateTime?
 
   orgId String
   org   Organization @relation(fields: [orgId], references: [id])
@@ -154,4 +159,15 @@ model CorrectiveAction {
 
   createdAt  DateTime @default(now())
   resolvedAt DateTime?
+}
+
+model RiskSnapshot {
+  id       String   @id @default(uuid())
+  personId String
+  score    Int
+  reason   String
+
+  person Person @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
 }

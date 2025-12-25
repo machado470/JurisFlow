@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import api from '../services/api'
+import { submitAssessment } from '../services/assessments'
 
 export function useAssessment() {
   const [loading, setLoading] = useState(false)
@@ -10,11 +10,10 @@ export function useAssessment() {
     score: number
     notes?: string
   }) {
-    setLoading(true)
-    setSuccess(false)
-
     try {
-      await api.post('/assessments', params)
+      setLoading(true)
+      setSuccess(false)
+      await submitAssessment(params)
       setSuccess(true)
     } finally {
       setLoading(false)

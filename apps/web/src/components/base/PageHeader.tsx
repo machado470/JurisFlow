@@ -12,13 +12,14 @@ export default function PageHeader({
   right,
 }: Props) {
   return (
-    <header className="flex items-start justify-between gap-6">
+    <header className="flex items-start justify-between gap-8">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight">
           {title}
         </h1>
+
         {description && (
-          <p className="text-sm opacity-60 mt-1">
+          <p className="text-sm text-slate-400 mt-2 max-w-2xl">
             {description}
           </p>
         )}

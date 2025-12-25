@@ -7,6 +7,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET || 'dev-secret',
     })
   }
@@ -15,7 +16,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       userId: payload.sub,
       role: payload.role,
-      personId: payload.personId,
+      orgId: payload.orgId,
+      personId: payload.personId ?? null,
     }
   }
 }

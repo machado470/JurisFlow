@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common'
 import { ReportsController } from './reports.controller'
 import { ReportsService } from './reports.service'
-
 import { RiskModule } from '../risk/risk.module'
-import { AssignmentsModule } from '../assignments/assignments.module'
-import { AuditModule } from '../audit/audit.module'
+import { PrismaModule } from '../prisma/prisma.module'
 
 @Module({
-  imports: [RiskModule, AssignmentsModule, AuditModule],
+  imports: [
+    PrismaModule,
+    RiskModule,
+  ],
   controllers: [ReportsController],
   providers: [ReportsService],
 })

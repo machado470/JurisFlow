@@ -17,6 +17,7 @@ type PersonAtRisk = {
 function riskTone(risk: RiskLevel) {
   if (risk === 'CRITICAL') return 'critical'
   if (risk === 'HIGH') return 'warning'
+  if (risk === 'MEDIUM') return 'warning'
   return 'success'
 }
 
@@ -40,38 +41,47 @@ export default function Reports() {
   }, [])
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <PageHeader
         title="Relatórios Executivos"
         description="Visão consolidada de risco humano e conformidade."
       />
 
       <Card>
-        <h3 className="font-medium mb-4">
+        <h3 className="font-medium mb-6">
           Pessoas que exigem atenção
         </h3>
 
         {loading ? (
-          <div className="text-sm opacity-60">
+          <div className="text-sm text-slate-400">
             Carregando dados…
           </div>
         ) : people.length === 0 ? (
-          <div className="text-sm opacity-60">
+          <div className="text-sm text-slate-400">
             Nenhuma pessoa em risco no momento.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {people.map(p => (
               <div
                 key={p.personId}
-                className="flex items-center justify-between"
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  rounded-lg
+                  px-4
+                  py-3
+                  hover:bg-white/5
+                  transition
+                "
               >
                 <div>
                   <div className="font-medium">
                     {p.name}
                   </div>
                   {p.email && (
-                    <div className="text-xs opacity-70">
+                    <div className="text-xs text-slate-400">
                       {p.email}
                     </div>
                   )}

@@ -1,83 +1,46 @@
-import { useEffect, useState } from 'react'
-import Card from '../../components/base/Card'
-import PageHeader from '../../components/base/PageHeader'
-import api from '../../services/api'
-
-type TrackCompliance = {
-  trackId: string
-  title: string
-  compliance: number
-}
-
-function barColor(value: number) {
-  if (value >= 80) return 'bg-green-500'
-  if (value >= 60) return 'bg-yellow-500'
-  return 'bg-red-500'
-}
+import PageHeader from '../../components/layout/PageHeader'
+import { useTheme } from '../../theme/useTheme'
 
 export default function Tracks() {
-  const [loading, setLoading] = useState(true)
-  const [tracks, setTracks] = useState<TrackCompliance[]>([])
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await api.get('/reports/executive')
-        setTracks(res.data.data.trackCompliance ?? [])
-      } catch (err) {
-        console.error('[Tracks]', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    load()
-  }, [])
+  const { styles } = useTheme()
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Conformidade por Trilhas"
-        description="Percentual médio de conformidade da equipe em cada trilha educacional."
+        title="Trilhas"
+        description="Crie e gerencie trilhas de treinamento para reduzir riscos jurídicos."
       />
 
-      <Card>
-        {loading ? (
-          <div className="text-sm opacity-60">
-            Carregando dados…
-          </div>
-        ) : tracks.length === 0 ? (
-          <div className="text-sm opacity-60">
-            Nenhuma trilha com dados suficientes.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {tracks.map(t => (
-              <div key={t.trackId}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium">
-                    {t.title}
-                  </span>
-                  <span className="opacity-70">
-                    {t.compliance}%
-                  </span>
-                </div>
+      <div
+        className={`
+          rounded-xl border p-6
+          ${styles.surface}
+          ${styles.border}
+        `}
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <input
+            placeholder="Nome da trilha"
+            className="rounded-md border px-4 py-2 text-sm"
+          />
 
-                <div className="h-3 rounded-full bg-slate-200 overflow-hidden">
-                  <div
-                    className={`h-full ${barColor(
-                      t.compliance,
-                    )}`}
-                    style={{
-                      width: `${t.compliance}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+          <input
+            placeholder="Slug"
+            className="rounded-md border px-4 py-2 text-sm"
+          />
+        </div>
+
+        <textarea
+          placeholder="Descrição (opcional)"
+          className="mt-4 w-full rounded-md border px-4 py-2 text-sm"
+        />
+
+        <div className="mt-6 flex justify-end">
+          <button className="rounded-md bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-500">
+            Criar trilha
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

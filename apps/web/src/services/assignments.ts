@@ -1,11 +1,20 @@
 import api from './api'
 
-export function listAssignments(orgId: string, personId: string) {
-  return api.get('/assignments', {
-    params: { orgId, personId },
-  }).then(res => res.data)
+export type MyAssignment = {
+  id: string
+  progress: number
+  risk: string
+  track: {
+    id: string
+    title: string
+  }
 }
 
-export function completeAssignment(id: string) {
-  return api.post(`/assignments/${id}/complete`)
+function unwrap<T>(res: any): T {
+  return res?.data?.data ?? res?.data ?? res
+}
+
+export async function listMyAssignments(): Promise<MyAssignment[]> {
+  const res = await api.get('/assignments/me')
+  return unwrap<MyAssignment[]>(res)
 }

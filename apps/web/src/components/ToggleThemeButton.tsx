@@ -1,14 +1,14 @@
-import useTheme from "../hooks/useTheme";
+import { useTheme } from '../theme/useTheme'
 
 export default function ToggleThemeButton() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <button
       onClick={toggleTheme}
-      className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-[#222] text-gray-700 dark:text-gray-200 text-sm"
+      className="px-3 py-1 rounded text-sm opacity-70 hover:opacity-100"
     >
-      {theme === "light" ? "🌙" : "🌞"}
+      {theme === 'blue' ? '☀️ Claro' : '🌙 Escuro'}
     </button>
-  );
+  )
 }

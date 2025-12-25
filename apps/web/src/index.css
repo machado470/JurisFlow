@@ -2,10 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 
-  O fundo do sistema é controlado exclusivamente
+/*
+  O fundo e as cores do sistema
+  são controlados exclusivamente
   pelo ThemeProvider.
 */
 body {
-  @apply text-zinc-900;
+  @apply antialiased;
 }

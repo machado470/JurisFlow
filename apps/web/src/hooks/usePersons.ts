@@ -1,25 +1,21 @@
 import { useEffect, useState } from 'react'
-import { listPersons } from '../services/persons'
-
-export type Person = {
-  id: string
-  name: string
-  email?: string
-  role: string
-  active: boolean
-}
+import { listPeople } from '../services/persons'
+import type { PersonSummary } from '../services/persons'
 
 export function usePersons() {
-  const [data, setData] = useState<Person[]>([])
+  const [data, setData] = useState<PersonSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await listPersons()
-        setData(res.data ?? [])
+        setLoading(true)
+        const people = await listPeople()
+        setData(people)
       } catch (err) {
         console.error('[usePersons]', err)
+        setError('Erro ao carregar pessoas')
       } finally {
         setLoading(false)
       }
@@ -28,5 +24,9 @@ export function usePersons() {
     load()
   }, [])
 
-  return { data, loading }
+  return {
+    data,
+    loading,
+    error,
+  }
 }

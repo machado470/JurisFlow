@@ -1,37 +1,32 @@
 import { useEffect, useState } from 'react'
-import api from '../services/api'
-
-export type MyAssignment = {
-  id: string
-  progress: number
-  risk: string
-  track: {
-    id: string
-    title: string
-  }
-}
+import { listMyAssignments } from '../services/assignments'
+import type { MyAssignment } from '../services/assignments'
 
 export function useMyAssignments() {
   const [assignments, setAssignments] = useState<MyAssignment[]>([])
   const [loading, setLoading] = useState(true)
-
-  async function load() {
-    setLoading(true)
-    try {
-      const res = await api.get('/assignments/me')
-      setAssignments(res.data.data ?? res.data)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true)
+        const data = await listMyAssignments()
+        setAssignments(data)
+      } catch (err) {
+        console.error('[useMyAssignments]', err)
+        setError('Erro ao carregar atividades')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     load()
   }, [])
 
   return {
     assignments,
     loading,
-    reload: load,
+    error,
   }
 }

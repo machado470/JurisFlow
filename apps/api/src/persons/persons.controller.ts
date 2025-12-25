@@ -1,54 +1,49 @@
 import {
+  Body,
   Controller,
   Get,
   Post,
   Patch,
   Param,
-  Body,
+  UseGuards,
+  Req,
 } from '@nestjs/common'
 import { PersonsService } from './persons.service'
-import { Org } from '../auth/decorators/org.decorator'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
 @Controller('persons')
+@UseGuards(JwtAuthGuard)
 export class PersonsController {
-  constructor(private readonly service: PersonsService) {}
+  constructor(private readonly persons: PersonsService) {}
 
   @Get()
-  list(@Org() orgId: string) {
-    return this.service.findAll(orgId)
+  list(@Req() req: any) {
+    return this.persons.list(req.user.orgId)
   }
 
   @Get(':id')
-  get(
-    @Param('id') id: string,
-    @Org() orgId: string,
-  ) {
-    return this.service.findOne(id, orgId)
+  get(@Req() req: any, @Param('id') id: string) {
+    return this.persons.getById(id, req.user.orgId)
   }
 
   @Post()
   create(
-    @Org() orgId: string,
+    @Req() req: any,
     @Body()
-    body: { name: string; email?: string; role: string },
+    data: {
+      name: string
+      email: string
+      role: 'ADMIN' | 'COLLABORATOR'
+    },
   ) {
-    return this.service.create(orgId, body)
+    return this.persons.create({
+      ...data,
+      orgId: req.user.orgId,
+    })
   }
 
-  @Patch(':id/active')
-  setActive(
-    @Param('id') id: string,
-    @Org() orgId: string,
-    @Body() body: { active: boolean },
-  ) {
-    return this.service.setActive(id, orgId, body.active)
-  }
-
-  @Get(':id/assignments')
-  assignments(
-    @Param('id') id: string,
-    @Org() orgId: string,
-  ) {
-    return this.service.getAssignments(id, orgId)
+  @Patch(':id/toggle')
+  toggle(@Req() req: any, @Param('id') id: string) {
+    return this.persons.toggleActive(id, req.user.orgId)
   }
 }

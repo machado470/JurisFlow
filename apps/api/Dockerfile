@@ -9,17 +9,16 @@ RUN apt-get update \
 RUN corepack enable \
   && corepack prepare pnpm@9.12.3 --activate
 
+# Copiar configs base
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
-COPY apps/api/prisma ./apps/api/prisma
+# Copiar APENAS UMA VEZ a API (inclui prisma, seed, src, tudo)
 COPY apps/api ./apps/api
-
-RUN pnpm install --frozen-lockfile
 
 WORKDIR /app/apps/api
 
-RUN npx prisma generate --schema=prisma/schema.prisma
-
+RUN pnpm install --frozen-lockfile
+RUN npx prisma generate
 RUN pnpm run build
 
 CMD ["node", "dist/main.js"]

@@ -1,61 +1,139 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { AssignmentsService } from '../assignments/assignments.service'
+import { RiskService } from '../risk/risk.service'
+import * as bcrypt from 'bcrypt'
 
 @Injectable()
 export class PersonsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly assignments: AssignmentsService,
+    private readonly risk: RiskService,
+  ) {}
 
-  findAll(orgId: string) {
+  list(orgId: string) {
     return this.prisma.person.findMany({
       where: { orgId },
       orderBy: { createdAt: 'desc' },
     })
   }
 
-  findOne(id: string, orgId: string) {
-    return this.prisma.person.findFirst({
-      where: {
-        id,
-        orgId,
+  async getById(personId: string, orgId: string) {
+    const person = await this.prisma.person.findFirst({
+      where: { id: personId, orgId },
+      include: {
+        assignments: {
+          include: {
+            track: true,
+            assessments: true,
+          },
+        },
+        correctiveActions: true,
+        events: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
       },
     })
+
+    if (!person) {
+      throw new BadRequestException('Pessoa não encontrada')
+    }
+
+    const peopleRisk = await this.risk.listPeopleRisk(orgId)
+    const current = peopleRisk.find(
+      p => p.personId === personId,
+    )
+
+    return {
+      ...person,
+      riskLevel: current?.risk ?? 'LOW',
+    }
   }
 
-  create(
-    orgId: string,
-    data: {
-      name: string
-      email?: string
-      role: string
-    },
-  ) {
-    return this.prisma.person.create({
+  async create(data: {
+    name: string
+    email: string
+    role: 'ADMIN' | 'COLLABORATOR'
+    orgId: string
+  }) {
+    const { name, email, role, orgId } = data
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+    })
+    if (!org) {
+      throw new BadRequestException('Organização não encontrada')
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+    })
+    if (existing) {
+      throw new BadRequestException('Email já cadastrado')
+    }
+
+    const passwordHash = await bcrypt.hash('123456', 10)
+
+    const user = await this.prisma.user.create({
       data: {
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        orgId,
+        email,
+        password: passwordHash,
+        role,
+        org: { connect: { id: orgId } },
       },
     })
-  }
 
-  setActive(id: string, orgId: string, active: boolean) {
-    return this.prisma.person.updateMany({
-      where: {
-        id,
-        orgId,
+    const person = await this.prisma.person.create({
+      data: {
+        name,
+        role,
+        active: true,
+        org: { connect: { id: orgId } },
+        user: { connect: { id: user.id } },
       },
-      data: { active },
     })
+
+    const tracks = await this.prisma.track.findMany()
+
+    for (const track of tracks) {
+      await this.assignments.createIfNotExists({
+        personId: person.id,
+        trackId: track.id,
+      })
+    }
+
+    return person
   }
 
-  getAssignments(personId: string, orgId: string) {
-    return this.prisma.assignment.findMany({
-      where: {
+  async toggleActive(personId: string, orgId: string) {
+    const person = await this.prisma.person.findFirst({
+      where: { id: personId, orgId },
+    })
+
+    if (!person) {
+      throw new BadRequestException('Pessoa não encontrada')
+    }
+
+    const updated = await this.prisma.person.update({
+      where: { id: personId },
+      data: { active: !person.active },
+    })
+
+    await this.prisma.event.create({
+      data: {
+        type: updated.active
+          ? 'PERSON_REACTIVATED'
+          : 'PERSON_DEACTIVATED',
+        severity: 'INFO',
+        description: updated.active
+          ? 'Pessoa reativada.'
+          : 'Pessoa desativada.',
         personId,
-        person: { orgId },
       },
-      include: { track: true },
     })
+
+    return updated
   }
 }

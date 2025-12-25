@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { RiskLevel } from '@prisma/client'
 import { AuditService } from '../audit/audit.service'
+
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
 @Injectable()
 export class AssignmentsService {
@@ -20,10 +21,10 @@ export class AssignmentsService {
     })
   }
 
-  listByPerson(personId: string) {
-    return this.prisma.assignment.findMany({
-      where: { personId },
-      include: { track: true },
+  async getActivePeople() {
+    return this.prisma.person.findMany({
+      where: { active: true },
+      select: { id: true },
     })
   }
 
@@ -47,15 +48,14 @@ export class AssignmentsService {
         personId: data.personId,
         trackId: data.trackId,
         progress: 0,
-        risk: RiskLevel.LOW,
+        risk: 'LOW',
       },
     })
 
-    // ✅ AUDITORIA REAL
     await this.audit.log({
       personId: assignment.personId,
       action: 'ASSIGNMENT_CREATED',
-      context: `Trilha atribuída`,
+      context: 'Trilha atribuída',
     })
 
     return assignment
@@ -68,17 +68,13 @@ export class AssignmentsService {
   ) {
     const assignment = await this.prisma.assignment.update({
       where: { id },
-      data: {
-        progress,
-        risk,
-      },
+      data: { progress, risk },
     })
 
-    // ✅ AUDITORIA REAL
     await this.audit.log({
       personId: assignment.personId,
       action: 'ASSIGNMENT_UPDATED',
-      context: `Progresso: ${progress}% · Risco: ${risk}`,
+      context: `Progresso ${progress}% · Risco ${risk}`,
     })
 
     return assignment

@@ -1,25 +1,38 @@
-type StatusBadgeProps = {
+import { useTheme } from '../../theme/useTheme'
+
+type Tone = 'success' | 'warning' | 'critical'
+
+type Props = {
   label: string
-  tone: 'critical' | 'warning' | 'success' | 'info'
+  tone: Tone
 }
 
-function toneClasses(tone: StatusBadgeProps['tone']) {
-  switch (tone) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-600 border-red-500/20'
-    case 'warning':
-      return 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-    case 'success':
-      return 'bg-green-500/10 text-green-600 border-green-500/20'
-    default:
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+export default function StatusBadge({ label, tone }: Props) {
+  const { styles } = useTheme()
+
+  function toneStyle() {
+    switch (tone) {
+      case 'critical':
+        return `
+          bg-red-500/15
+          text-red-400
+          border-red-500/30
+        `
+      case 'warning':
+        return `
+          bg-yellow-500/15
+          text-yellow-400
+          border-yellow-500/30
+        `
+      default:
+        return `
+          bg-emerald-500/15
+          text-emerald-400
+          border-emerald-500/30
+        `
+    }
   }
-}
 
-export default function StatusBadge({
-  label,
-  tone,
-}: StatusBadgeProps) {
   return (
     <span
       className={`
@@ -29,10 +42,11 @@ export default function StatusBadge({
         border
         px-3
         py-1
-        text-sm
-        font-medium
-        backdrop-blur
-        ${toneClasses(tone)}
+        text-[11px]
+        font-semibold
+        uppercase
+        tracking-wide
+        ${toneStyle()}
       `}
     >
       {label}

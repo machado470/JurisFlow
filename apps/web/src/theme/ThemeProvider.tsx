@@ -1,11 +1,17 @@
-import { createContext, useEffect, useState } from 'react'
-import { themes } from './themes'
-import type { ThemeName } from './themes'
+import {
+  createContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react'
+
+import { themes, type ThemeName } from './themes'
 
 type ThemeContextType = {
   theme: ThemeName
   setTheme: (t: ThemeName) => void
-  styles: (typeof themes)['blue']
+  toggleTheme: () => void
+  styles: (typeof themes)[ThemeName]
 }
 
 export const ThemeContext =
@@ -14,29 +20,37 @@ export const ThemeContext =
 export function ThemeProvider({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const [theme, setTheme] = useState<ThemeName>('blue')
 
   useEffect(() => {
-    document.documentElement.classList.remove(
-      'blue',
-      'offwhite'
-    )
-    document.documentElement.classList.add(theme)
+    const saved = localStorage.getItem('theme') as ThemeName | null
+    if (saved && themes[saved]) {
+      setTheme(saved)
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme)
   }, [theme])
+
+  function toggleTheme() {
+    setTheme(prev =>
+      prev === 'blue' ? 'offwhite' : 'blue',
+    )
+  }
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
         setTheme,
+        toggleTheme,
         styles: themes[theme],
       }}
     >
-      <div className={`${themes[theme].bg} min-h-screen`}>
-        {children}
-      </div>
+      {children}
     </ThemeContext.Provider>
   )
 }

@@ -1,48 +1,43 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001',
+  baseURL: import.meta.env.VITE_API_URL,
 })
 
-// 🔐 Interceptor de request
-api.interceptors.request.use(
-  (config) => {
-    /**
-     * ❗️IMPORTANTE
-     * Não enviar token em rotas públicas
-     */
-    const publicRoutes = ['/auth/login']
+/**
+ * REQUEST
+ * Injeta token em todas as requisições
+ */
+api.interceptors.request.use(config => {
+  const raw = localStorage.getItem('auth')
 
-    if (
-      config.url &&
-      publicRoutes.some(route => config.url?.includes(route))
-    ) {
-      return config
-    }
-
-    const token = localStorage.getItem('token')
-
+  if (raw) {
+    const { token } = JSON.parse(raw)
     if (token) {
       config.headers = config.headers ?? {}
       config.headers.Authorization = `Bearer ${token}`
     }
+  }
 
-    return config
-  },
-  (error) => Promise.reject(error)
-)
+  return config
+})
 
-// 🚨 Interceptor de response
+/**
+ * RESPONSE
+ * Se token expirar → derruba sessão global
+ */
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     if (error.response?.status === 401) {
-      console.warn('⚠️ Token inválido ou expirado')
-      // aqui futuramente: redirect para /login
+      localStorage.removeItem('auth')
+
+      // força o fluxo normal do EntryGate
+      window.location.href = '/'
     }
 
     return Promise.reject(error)
-  }
+  },
 )
 
 export default api

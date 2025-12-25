@@ -1,19 +1,20 @@
+import api from './api'
 import type { CorrectiveAction } from '../models/CorrectiveAction'
 
-let actions: CorrectiveAction[] = []
-
-export function listCorrectiveActions() {
-  return actions
-}
-
-export function createCorrectiveAction(
-  action: CorrectiveAction
+export async function listCorrectiveActions(
+  personId: string,
 ) {
-  actions.push(action)
+  const res = await api.get(
+    `/corrective-actions/person/${personId}`,
+  )
+  return res.data as CorrectiveAction[]
 }
 
-export function resolveCorrectiveAction(id: string) {
-  actions = actions.map(a =>
-    a.id === id ? { ...a, status: 'DONE' } : a
+export async function resolveCorrectiveAction(
+  id: string,
+) {
+  const res = await api.post(
+    `/corrective-actions/${id}/resolve`,
   )
+  return res.data as CorrectiveAction
 }

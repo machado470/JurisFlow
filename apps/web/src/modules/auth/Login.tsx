@@ -1,89 +1,121 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
 import { useAuth } from '../../auth/AuthContext'
+import Card from '../../components/base/Card'
 
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  const [email, setEmail] = useState('admin@autoescola.com')
-  const [password, setPassword] = useState('123456')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
     setLoading(true)
 
-    // 🔐 LOGIN MOCK CONTROLADO
-    login({
-      user: {
-        id: 'admin-1',
+    try {
+      const res = await api.post('/auth/login', {
         email,
-        role: 'ADMIN',
-      },
-      token: 'mock-token-admin',
-    })
+        password,
+      })
 
-    navigate('/admin')
+      const { token, user } = res.data.data
+      login(token, user)
+
+      navigate(user.role === 'ADMIN' ? '/admin' : '/collaborator')
+    } catch {
+      setError('Não foi possível autenticar. Verifique seus dados.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* Lado institucional */}
-      <div className="hidden md:flex flex-col justify-center px-16 bg-gradient-to-br from-blue-700 to-blue-900 text-white">
-        <span className="inline-block mb-6 px-3 py-1 rounded-full bg-white/10 text-sm">
-          Plataforma Jurídica
-        </span>
-
-        <h1 className="text-5xl font-bold mb-4">
-          JurisFlow
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <Card className="w-full max-w-md">
+        <h1 className="text-xl font-semibold tracking-tight">
+          Acesso ao JurisFlow
         </h1>
 
-        <p className="text-lg opacity-90 mb-6">
-          Controle de risco jurídico com dados reais,
-          trilhas estruturadas e ações corretivas auditáveis.
+        <p className="mt-2 text-sm text-slate-400">
+          Informe suas credenciais para continuar.
         </p>
 
-        <ul className="space-y-2 text-sm opacity-90">
-          <li>• Identifique riscos antes que virem problemas</li>
-          <li>• Padronize o treinamento da equipe</li>
-          <li>• Tome decisões com base em dados</li>
-        </ul>
-      </div>
+        {error && (
+          <div className="mt-4 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
-      {/* Formulário */}
-      <div className="flex items-center justify-center bg-[#f7f5ef]">
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6"
+          className="mt-6 space-y-4"
         >
-          <h2 className="text-2xl font-semibold">
-            Acessar plataforma
-          </h2>
-
           <input
             type="email"
-            className="w-full p-3 rounded border"
+            placeholder="E-mail"
             value={email}
-            disabled
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="
+              w-full
+              rounded-lg
+              bg-slate-800/60
+              px-3
+              py-2
+              text-sm
+              outline-none
+              ring-1
+              ring-white/10
+              focus:ring-blue-500/40
+            "
           />
 
           <input
             type="password"
-            className="w-full p-3 rounded border"
+            placeholder="Senha"
             value={password}
-            disabled
+            onChange={e => setPassword(e.target.value)}
+            required
+            className="
+              w-full
+              rounded-lg
+              bg-slate-800/60
+              px-3
+              py-2
+              text-sm
+              outline-none
+              ring-1
+              ring-white/10
+              focus:ring-blue-500/40
+            "
           />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="
+              w-full
+              rounded-lg
+              bg-blue-600
+              py-2
+              text-sm
+              font-medium
+              text-white
+              hover:bg-blue-500
+              transition
+              disabled:opacity-50
+            "
           >
-            Entrar como administrador
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

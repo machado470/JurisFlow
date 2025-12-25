@@ -4,10 +4,13 @@ import {
   Post,
   Param,
   Body,
+  UseGuards,
 } from '@nestjs/common'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CorrectiveActionsService } from './corrective-actions.service'
 
 @Controller('corrective-actions')
+@UseGuards(JwtAuthGuard)
 export class CorrectiveActionsController {
   constructor(
     private readonly service: CorrectiveActionsService,
@@ -28,7 +31,10 @@ export class CorrectiveActionsController {
       reason: string
     },
   ) {
-    return this.service.create(body)
+    return this.service.create({
+      personId: body.personId,
+      reason: body.reason,
+    })
   }
 
   @Post(':id/resolve')

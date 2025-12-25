@@ -1,32 +1,27 @@
-import Card from './Card'
-import { useTheme } from '../../theme/ThemeProvider'
+import { useTheme } from '../../theme/useTheme'
 
-export default function KpiCard({
-  label,
-  value,
-  hint,
-}: {
+type Props = {
   label: string
   value: string | number
-  hint?: string
-}) {
+}
+
+export default function KpiCard({ label, value }: Props) {
   const { styles } = useTheme()
 
   return (
-    <Card className="flex flex-col gap-2">
-      <span className={`text-xs uppercase tracking-wide ${styles.muted}`}>
+    <div
+      className={`
+        rounded-lg border p-4
+        ${styles.surface}
+        ${styles.border}
+      `}
+    >
+      <div className="text-xs opacity-60">
         {label}
-      </span>
-
-      <span className="text-3xl font-semibold leading-none">
+      </div>
+      <div className="mt-1 text-2xl font-semibold">
         {value}
-      </span>
-
-      {hint && (
-        <span className={`text-xs ${styles.muted}`}>
-          {hint}
-        </span>
-      )}
-    </Card>
+      </div>
+    </div>
   )
 }
