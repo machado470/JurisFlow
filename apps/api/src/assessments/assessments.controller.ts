@@ -12,8 +12,6 @@ export class AssessmentsController {
     @Body()
     body: {
       assignmentId: string
-      personId: string
-      trackId: string
       score: number
       notes?: string
     },

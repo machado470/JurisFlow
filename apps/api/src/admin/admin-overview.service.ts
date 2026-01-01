@@ -1,31 +1,42 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
 @Injectable()
 export class AdminOverviewService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOverview(orgId: string) {
-    const assignments = await this.prisma.assignment.findMany({
-      where: { person: { orgId } },
-      include: { person: true },
+    if (!orgId) {
+      return {
+        total: 0,
+        critical: 0,
+        warning: 0,
+      }
+    }
+
+    const total = await this.prisma.person.count({
+      where: { orgId },
     })
 
-    const summary: Record<RiskLevel | 'total', number> = {
-      total: assignments.length,
-      CRITICAL: 0,
-      HIGH: 0,
-      MEDIUM: 0,
-      LOW: 0,
-    }
+    const critical = await this.prisma.correctiveAction.count({
+      where: {
+        person: { orgId },
+        status: 'OPEN',
+      },
+    })
 
-    for (const a of assignments) {
-      const risk = a.risk as RiskLevel
-      summary[risk]++
-    }
+    const warning = await this.prisma.assignment.count({
+      where: {
+        person: { orgId },
+        progress: { lt: 100 },
+      },
+    })
 
-    return summary
+    return {
+      total,
+      critical,
+      warning,
+    }
   }
 }
+

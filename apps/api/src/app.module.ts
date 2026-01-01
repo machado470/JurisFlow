@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
 
 import { PrismaModule } from './prisma/prisma.module'
 import { HealthModule } from './health/health.module'
 import { AuthModule } from './auth/auth.module'
+import { MeModule } from './me/me.module'
+import { OnboardingModule } from './onboarding/onboarding.module'
 
 // núcleo de pessoas
 import { PersonsModule } from './persons/persons.module'
@@ -13,7 +16,7 @@ import { TracksModule } from './tracks/tracks.module'
 import { AssignmentsModule } from './assignments/assignments.module'
 import { AssessmentsModule } from './assessments/assessments.module'
 
-// risco e auditoria
+// risco, tempo e auditoria
 import { RiskModule } from './risk/risk.module'
 import { AuditModule } from './audit/audit.module'
 
@@ -25,32 +28,43 @@ import { ReportsModule } from './reports/reports.module'
 import { PendingModule } from './pending/pending.module'
 import { AdminModule } from './admin/admin.module'
 
+// timeline
+import { TimelineModule } from './timeline/timeline.module'
+
+// exceções humanas
+import { ExceptionsModule } from './exceptions/exceptions.module'
+
 @Module({
   imports: [
+    // 🔑 ENV GLOBAL (OBRIGATÓRIO)
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+
     PrismaModule,
     HealthModule,
     AuthModule,
+    MeModule,
+    OnboardingModule,
 
-    // núcleo de pessoas
     PersonsModule,
     PeopleModule,
 
-    // domínio educacional
     TracksModule,
-    AssignmentsModule, // 🚨 ESTE ERA O BLOQUEIO
+    AssignmentsModule,
     AssessmentsModule,
 
-    // risco e auditoria
     RiskModule,
     AuditModule,
 
-    // ações corretivas e relatórios
     CorrectiveActionsModule,
     ReportsModule,
 
-    // leitura estratégica
     PendingModule,
     AdminModule,
+    TimelineModule,
+
+    ExceptionsModule,
   ],
 })
 export class AppModule {}

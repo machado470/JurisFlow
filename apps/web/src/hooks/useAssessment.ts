@@ -1,28 +1,50 @@
 import { useState } from 'react'
-import { submitAssessment } from '../services/assessments'
+import api from '../services/api'
 
-export function useAssessment() {
+type AssessmentResult = {
+  assessment: {
+    id: string
+    score: number
+    risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  }
+  feedback: {
+    score: number
+    educationalRisk: 'LOW' | 'MEDIUM' | 'HIGH'
+    operationalRiskScore: number
+    message: string
+    nextStep: string
+  }
+}
+
+export default function useAssessment() {
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  async function submit(params: {
+  async function submitAssessment(params: {
     assignmentId: string
     score: number
     notes?: string
-  }) {
+  }): Promise<AssessmentResult> {
     try {
       setLoading(true)
-      setSuccess(false)
-      await submitAssessment(params)
-      setSuccess(true)
+      setError(null)
+
+      const res = await api.post('/assessments', params)
+      return res.data.data
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.error?.message ||
+          'Erro ao enviar avaliação',
+      )
+      throw err
     } finally {
       setLoading(false)
     }
   }
 
   return {
-    submit,
+    submitAssessment,
     loading,
-    success,
+    error,
   }
 }

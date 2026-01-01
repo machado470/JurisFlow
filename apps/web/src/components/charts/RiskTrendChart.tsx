@@ -20,23 +20,21 @@ type Props = {
   data?: DataPoint[]
 }
 
-const fallbackData: DataPoint[] = [
-  { label: 'Seg', critical: 3, high: 5, medium: 8 },
-  { label: 'Ter', critical: 2, high: 6, medium: 7 },
-  { label: 'Qua', critical: 4, high: 5, medium: 6 },
-  { label: 'Qui', critical: 3, high: 4, medium: 5 },
-  { label: 'Sex', critical: 2, high: 3, medium: 4 },
-]
-
 export default function RiskTrendChart({ data }: Props) {
   const { styles } = useTheme()
 
-  const chartData = data ?? fallbackData
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-48 w-full flex items-center justify-center text-sm opacity-60">
+        Sem dados históricos suficientes para exibir tendência
+      </div>
+    )
+  }
 
   return (
     <div className="h-48 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
+        <LineChart data={data}>
           <XAxis
             dataKey="label"
             stroke="currentColor"
@@ -82,4 +80,3 @@ export default function RiskTrendChart({ data }: Props) {
     </div>
   )
 }
-

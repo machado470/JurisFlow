@@ -1,18 +1,59 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
+const PUBLIC_ROUTES = ['/', '/login', '/logout']
+
 export default function EntryGate() {
-  const { user, token } = useAuth()
+  const { token, user, systemState, loading } = useAuth()
+  const location = useLocation()
 
-  // Não autenticado → landing institucional
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm opacity-60">
+        Validando sessão…
+      </div>
+    )
+  }
+
+  // 🌐 Rotas públicas reais (landing, login, logout)
+  if (PUBLIC_ROUTES.includes(location.pathname)) {
+    return null
+  }
+
+  // 🔓 Sem sessão → login
   if (!token || !user) {
-    return <Navigate to="/landing" replace />
+    return <Navigate to="/login" replace />
   }
 
-  // Autenticado → decide por role
-  if (user.role === 'ADMIN') {
-    return <Navigate to="/admin" replace />
+  if (!systemState) return null
+
+  // 👑 ADMIN
+  if (systemState.isAdmin) {
+    if (
+      systemState.requiresOnboarding &&
+      location.pathname !== '/admin/onboarding'
+    ) {
+      return <Navigate to="/admin/onboarding" replace />
+    }
+
+    if (
+      !systemState.requiresOnboarding &&
+      location.pathname === '/admin/onboarding'
+    ) {
+      return <Navigate to="/admin" replace />
+    }
+
+    if (!location.pathname.startsWith('/admin')) {
+      return <Navigate to="/admin" replace />
+    }
+
+    return null
   }
 
-  return <Navigate to="/collaborator" replace />
+  // 👤 COLABORADOR
+  if (!location.pathname.startsWith('/collaborator')) {
+    return <Navigate to="/collaborator" replace />
+  }
+
+  return null
 }

@@ -1,134 +1,71 @@
 import { Injectable } from '@nestjs/common'
-import { RiskService } from '../risk/risk.service'
 import { PrismaService } from '../prisma/prisma.service'
 
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-const RISK_PRIORITY: RiskLevel[] = [
-  'CRITICAL',
-  'HIGH',
-  'MEDIUM',
-  'LOW',
-]
+const DAYS_SOON_WARNING = 3
 
 @Injectable()
 export class ReportsService {
-  constructor(
-    private readonly risk: RiskService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * ============================
-   * EXECUTIVE SUMMARY
-   * ============================
-   */
+  async executive(orgId: string) {
+    const people = await this.prisma.person.findMany({
+      where: { orgId, active: true },
+      include: { assignments: true },
+    })
 
-  async executiveSummary(orgId: string) {
-    const people = await this.risk.listPeopleRisk(orgId)
+    const correctiveOpenCount =
+      await this.prisma.correctiveAction.count({
+        where: {
+          person: { orgId },
+          status: { in: ['OPEN', 'AWAITING_REASSESSMENT'] },
+        },
+      })
 
-    const summary: Record<RiskLevel | 'totalPeople', number> = {
-      totalPeople: people.length,
-      CRITICAL: 0,
-      HIGH: 0,
-      MEDIUM: 0,
-      LOW: 0,
-    }
+    const peopleAtRisk: any[] = []
+    const peopleAtRiskSoon: any[] = []
+
+    const now = Date.now()
 
     for (const p of people) {
-      summary[p.risk as RiskLevel]++
-    }
+      const hasCritical =
+        await this.prisma.correctiveAction.count({
+          where: {
+            personId: p.id,
+            status: 'OPEN',
+          },
+        })
 
-    return summary
-  }
+      if (hasCritical) {
+        peopleAtRisk.push({
+          id: p.id,
+          name: p.name,
+        })
+        continue
+      }
 
-  /**
-   * ============================
-   * PEOPLE AT RISK (STRATEGIC)
-   * ============================
-   */
+      for (const a of p.assignments) {
+        if (a.progress >= 100) continue
 
-  async peopleAtRisk(orgId: string) {
-    const people = await this.risk.listPeopleRisk(orgId)
-
-    const risky = people.filter(p =>
-      ['HIGH', 'CRITICAL'].includes(p.risk),
-    )
-
-    if (risky.length === 0) return []
-
-    const personIds = risky.map(p => p.personId)
-
-    const lastEvents =
-      await this.prisma.event.findMany({
-        where: { personId: { in: personIds } },
-        orderBy: { createdAt: 'desc' },
-      })
-
-    return risky
-      .map(p => {
-        const event = lastEvents.find(
-          e => e.personId === p.personId,
+        const daysInactive = Math.floor(
+          (now - a.updatedAt.getTime()) /
+            (1000 * 60 * 60 * 24),
         )
 
-        return {
-          personId: p.personId,
-          name: p.name,
-          email: p.email,
-          risk: p.risk,
-          riskScore: p.riskScore,
-          mainReason:
-            event?.description ??
-            'Risco educacional elevado',
-          lastEventAt: event?.createdAt ?? null,
+        if (daysInactive >= DAYS_SOON_WARNING) {
+          peopleAtRiskSoon.push({
+            id: p.id,
+            name: p.name,
+            daysInactive,
+          })
+          break
         }
-      })
-      .sort(
-        (a, b) =>
-          RISK_PRIORITY.indexOf(a.risk) -
-          RISK_PRIORITY.indexOf(b.risk),
-      )
-  }
+      }
+    }
 
-  /**
-   * ============================
-   * PENDING ACTIONS (OPERATIONAL)
-   * ============================
-   */
-
-  async pending(orgId: string) {
-    const peopleRisk = await this.risk.listPeopleRisk(orgId)
-
-    const risky = peopleRisk.filter(p =>
-      ['HIGH', 'CRITICAL'].includes(p.risk),
-    )
-
-    if (risky.length === 0) return []
-
-    const personIds = risky.map(p => p.personId)
-
-    const actions =
-      await this.prisma.correctiveAction.findMany({
-        where: {
-          personId: { in: personIds },
-          status: { not: 'DONE' },
-        },
-        include: {
-          person: true,
-        },
-        orderBy: { createdAt: 'asc' },
-      })
-
-    return actions.map(a => ({
-      personId: a.personId,
-      personName: a.person.name,
-      risk:
-        risky.find(p => p.personId === a.personId)
-          ?.risk,
-      actionId: a.id,
-      reason: a.reason,
-      status: a.status,
-      createdAt: a.createdAt,
-    }))
+    return {
+      peopleAtRisk,
+      peopleAtRiskSoon,
+      correctiveOpenCount,
+    }
   }
 }

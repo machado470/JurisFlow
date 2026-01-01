@@ -1,57 +1,31 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { useAssessment } from '../../hooks/useAssessment'
+import PageHeader from '../../components/base/PageHeader'
+import Card from '../../components/base/Card'
+import useAssessment from '../../hooks/useAssessment'
 
-export default function CollaboratorAssessment() {
-  const { assignmentId } = useParams()
-  const navigate = useNavigate()
-  const { submit, loading } = useAssessment()
-
-  const [score, setScore] = useState(0)
-
-  async function handleSubmit() {
-    if (!assignmentId) return
-
-    await submit({
-      assignmentId,
-      score,
-    })
-
-    navigate('/collaborator')
-  }
+export default function Assessment() {
+  const { submitAssessment, loading } = useAssessment()
 
   return (
-    <div className="space-y-6 max-w-xl">
-      <h1 className="text-2xl font-bold">
-        Avaliação
-      </h1>
+    <div className="space-y-8">
+      <PageHeader
+        title="Avaliação"
+        description="Responda com atenção. Esta avaliação impacta seu risco."
+      />
 
-      <p className="opacity-70">
-        Responda a avaliação para concluir a trilha.
-      </p>
-
-      <div className="space-y-3">
-        <label className="block text-sm">
-          Nota (0 a 100)
-        </label>
-
-        <input
-          type="number"
-          min={0}
-          max={100}
-          value={score}
-          onChange={e => setScore(Number(e.target.value))}
-          className="w-full rounded border px-3 py-2"
-        />
-      </div>
-
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
-      >
-        {loading ? 'Enviando…' : 'Enviar avaliação'}
-      </button>
+      <Card>
+        <button
+          onClick={() =>
+            submitAssessment({
+              assignmentId: 'manual',
+              score: 100,
+            })
+          }
+          disabled={loading}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 transition disabled:opacity-50"
+        >
+          {loading ? 'Enviando…' : 'Enviar avaliação'}
+        </button>
+      </Card>
     </div>
   )
 }

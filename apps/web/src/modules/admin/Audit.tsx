@@ -2,59 +2,93 @@ import { useEffect, useState } from 'react'
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
 import EventTimeline from '../../components/base/EventTimeline'
+import {
+  getPersonTimeline,
+} from '../../services/timeline'
+import type { TimelineItem } from '../../services/timeline'
 import api from '../../services/api'
 
-type Event = {
+type Person = {
   id: string
-  createdAt: string
-  action: string
-  context?: string
-  person?: {
-    name: string
-  }
+  name: string
 }
 
 export default function Audit() {
-  const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
+  const [people, setPeople] = useState<Person[]>([])
+  const [selectedPerson, setSelectedPerson] =
+    useState<string | null>(null)
+  const [events, setEvents] = useState<TimelineItem[]>([])
+  const [loading, setLoading] = useState(false)
+
+  async function loadPeople() {
+    const res = await api.get('/people')
+    setPeople(res.data.data)
+  }
+
+  async function loadTimeline(personId: string) {
+    setLoading(true)
+    const timeline = await getPersonTimeline(personId)
+    setEvents(timeline)
+    setLoading(false)
+  }
 
   useEffect(() => {
-    async function load() {
-      const res = await api.get('/audit')
-      setEvents(res.data.data)
-      setLoading(false)
-    }
-
-    load()
+    loadPeople()
   }, [])
+
+  useEffect(() => {
+    if (selectedPerson) {
+      loadTimeline(selectedPerson)
+    }
+  }, [selectedPerson])
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Auditoria"
-        description="Eventos reais gerados pelo sistema."
+        description="Linha do tempo auditável de decisões, eventos e impactos de risco."
       />
 
       <Card>
-        {loading ? (
-          <div className="text-sm opacity-60">
-            Carregando eventos…
+        <div className="mb-4">
+          <label className="block text-sm mb-1">
+            Pessoa
+          </label>
+
+          <select
+            className="bg-white/5 rounded px-3 py-2 text-sm w-full"
+            value={selectedPerson ?? ''}
+            onChange={e =>
+              setSelectedPerson(e.target.value)
+            }
+          >
+            <option value="">
+              Selecione uma pessoa
+            </option>
+
+            {people.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {!selectedPerson && (
+          <div className="text-sm text-slate-400">
+            Selecione uma pessoa para visualizar a
+            auditoria completa.
           </div>
-        ) : events.length === 0 ? (
-          <div className="text-sm opacity-60">
-            Nenhum evento registrado.
+        )}
+
+        {loading && (
+          <div className="text-sm text-slate-400">
+            Carregando auditoria…
           </div>
-        ) : (
-          <EventTimeline
-            events={events.map(e => ({
-              id: e.id,
-              date: e.createdAt,
-              type: e.action,
-              severity: 'INFO',
-              description: e.context ?? 'Evento registrado',
-              person: e.person?.name,
-            }))}
-          />
+        )}
+
+        {!loading && selectedPerson && (
+          <EventTimeline events={events} />
         )}
       </Card>
     </div>

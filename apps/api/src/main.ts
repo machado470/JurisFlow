@@ -1,40 +1,20 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
-import { ResponseInterceptor } from './common/interceptors/response.interceptor'
-import { HttpExceptionFilter } from './common/filters/http-exception.filter'
-import { ValidationPipe, BadRequestException } from '@nestjs/common'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    cors: true,
+  const app = await NestFactory.create(AppModule)
+
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   })
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      exceptionFactory: (errors) => {
-        const formattedErrors = {}
-
-        for (const err of errors) {
-          formattedErrors[err.property] = Object.values(
-            err.constraints ?? {},
-          )[0]
-        }
-
-        return new BadRequestException(formattedErrors)
-      },
-    }),
-  )
-
-  app.useGlobalInterceptors(new ResponseInterceptor())
-  app.useGlobalFilters(new HttpExceptionFilter())
-
-  const port = Number(process.env.PORT ?? 3000)
+  const port = process.env.PORT || 3000
   await app.listen(port, '0.0.0.0')
 
-  console.log(`🚀 API rodando em http://0.0.0.0:${port}`)
+  console.log(`🚀 API LISTENING ON http://0.0.0.0:${port}`)
 }
 
 bootstrap()

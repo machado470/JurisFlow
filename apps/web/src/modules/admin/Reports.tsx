@@ -2,17 +2,12 @@ import { useEffect, useState } from 'react'
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
 import StatusBadge from '../../components/base/StatusBadge'
-import { getExecutiveReport } from '../../services/reports'
+import {
+  getExecutiveReport,
+  type PersonAtRisk,
+} from '../../services/reports'
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-type PersonAtRisk = {
-  personId: string
-  name: string
-  email?: string
-  risk: RiskLevel
-  progress: number
-}
 
 function riskTone(risk: RiskLevel) {
   if (risk === 'CRITICAL') return 'critical'
@@ -28,15 +23,12 @@ export default function Reports() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await getExecutiveReport('default')
-        setPeople(res.data.peopleAtRisk ?? [])
-      } catch (err) {
-        console.error('[Reports]', err)
+        const report = await getExecutiveReport()
+        setPeople(report.peopleAtRisk ?? [])
       } finally {
         setLoading(false)
       }
     }
-
     load()
   }, [])
 
@@ -64,27 +56,11 @@ export default function Reports() {
           <div className="space-y-2">
             {people.map(p => (
               <div
-                key={p.personId}
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  rounded-lg
-                  px-4
-                  py-3
-                  hover:bg-white/5
-                  transition
-                "
+                key={p.id}
+                className="flex items-center justify-between rounded-lg px-4 py-3 hover:bg-white/5 transition"
               >
                 <div>
-                  <div className="font-medium">
-                    {p.name}
-                  </div>
-                  {p.email && (
-                    <div className="text-xs text-slate-400">
-                      {p.email}
-                    </div>
-                  )}
+                  <div className="font-medium">{p.name}</div>
                 </div>
 
                 <StatusBadge

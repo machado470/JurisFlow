@@ -1,23 +1,19 @@
 import { Outlet } from 'react-router-dom'
-import { useTheme } from '../../theme/useTheme'
-
+import { useAuth } from '../../auth/AuthContext'
 import AdminSidebar from '../../layouts/AdminSidebar'
 import Topbar from '../../layouts/Topbar'
 import AdminContent from '../../layouts/AdminContent'
 
 export default function AdminLayout() {
-  const { styles } = useTheme()
+  const { systemState } = useAuth()
+  const onboarding = systemState?.requiresOnboarding
 
   return (
-    <div className={`min-h-screen ${styles.bg}`}>
-      <AdminSidebar />
+    <div className="min-h-screen">
+      {!onboarding && <AdminSidebar />}
 
-      {/* Área principal */}
-      <div className="ml-64 flex min-h-screen flex-col">
-        {/* Topbar controla seu próprio espaçamento */}
-        <Topbar />
-
-        {/* Conteúdo controla largura e padding */}
+      <div className={onboarding ? '' : 'ml-64'}>
+        {!onboarding && <Topbar />}
         <AdminContent>
           <Outlet />
         </AdminContent>
@@ -25,4 +21,3 @@ export default function AdminLayout() {
     </div>
   )
 }
-

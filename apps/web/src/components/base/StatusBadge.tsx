@@ -1,17 +1,42 @@
-import { useTheme } from '../../theme/useTheme'
-
 type Tone = 'success' | 'warning' | 'critical'
 
 type Props = {
   label: string
-  tone: Tone
+  tone?: string | null
 }
 
-export default function StatusBadge({ label, tone }: Props) {
-  const { styles } = useTheme()
+function normalizeTone(tone?: string | null): Tone {
+  if (!tone) return 'success'
+
+  switch (tone.toLowerCase()) {
+    case 'critical':
+    case 'danger':
+    case 'high':
+      return 'critical'
+
+    case 'warning':
+    case 'medium':
+      return 'warning'
+
+    case 'success':
+    case 'ok':
+    case 'low':
+    case 'active':
+      return 'success'
+
+    default:
+      return 'success'
+  }
+}
+
+export default function StatusBadge({
+  label,
+  tone,
+}: Props) {
+  const normalized = normalizeTone(tone)
 
   function toneStyle() {
-    switch (tone) {
+    switch (normalized) {
       case 'critical':
         return `
           bg-red-500/15

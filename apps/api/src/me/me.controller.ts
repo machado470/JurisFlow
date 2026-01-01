@@ -1,37 +1,54 @@
-import { Controller, Get, Req } from '@nestjs/common'
+import {
+  Controller,
+  Get,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { PrismaService } from '../prisma/prisma.service'
+import { AssignmentsService } from '../assignments/assignments.service'
+import { TemporalRiskService } from '../risk/temporal-risk.service'
 
 @Controller('me')
+@UseGuards(JwtAuthGuard)
 export class MeController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly temporal: TemporalRiskService,
+    private readonly assignments: AssignmentsService,
+  ) {}
 
-  @Get('assignments')
-  async assignments(@Req() req: any) {
-    const userId = req.user?.sub
-
-    if (!userId) {
-      return []
-    }
-
+  @Get()
+  async me(@Req() req: any) {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: req.user.sub },
       include: {
+        org: true,
         person: true,
       },
     })
 
-    if (!user?.personId) {
-      return []
-    }
+    if (!user) return null
 
-    return this.prisma.assignment.findMany({
-      where: { personId: user.personId },
-      include: {
-        track: true,
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    })
+    const personId = user.person?.id ?? null
+
+    const urgency = personId
+      ? await this.temporal.calculateUrgency(personId)
+      : 'NORMAL'
+
+    const assignments = personId
+      ? await this.assignments.findByPerson(personId)
+      : []
+
+    return {
+      id: user.id,
+      role: user.role,
+      orgId: user.orgId,
+      personId,
+      requiresOnboarding:
+        user.org?.requiresOnboarding ?? false,
+      urgency,
+      assignments,
+    }
   }
 }

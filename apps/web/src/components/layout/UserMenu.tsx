@@ -25,7 +25,7 @@ export default function UserMenu() {
           ${styles.text}
         `}
       >
-        <span>{user?.name ?? 'Usuário'}</span>
+        <span>{user?.email ?? 'Usuário'}</span>
         <span className="text-xs opacity-60">
           {user?.role}
         </span>

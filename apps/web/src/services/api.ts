@@ -9,14 +9,11 @@ const api = axios.create({
  * Injeta token em todas as requisições
  */
 api.interceptors.request.use(config => {
-  const raw = localStorage.getItem('auth')
+  const token = localStorage.getItem('token')
 
-  if (raw) {
-    const { token } = JSON.parse(raw)
-    if (token) {
-      config.headers = config.headers ?? {}
-      config.headers.Authorization = `Bearer ${token}`
-    }
+  if (token) {
+    config.headers = config.headers ?? {}
+    config.headers.Authorization = `Bearer ${token}`
   }
 
   return config
@@ -24,16 +21,17 @@ api.interceptors.request.use(config => {
 
 /**
  * RESPONSE
- * Se token expirar → derruba sessão global
+ * Só derruba sessão se o token já existia
+ * Evita matar login em estado transitório
  */
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('auth')
+    const hadToken = !!localStorage.getItem('token')
 
-      // força o fluxo normal do EntryGate
-      window.location.href = '/'
+    if (error.response?.status === 401 && hadToken) {
+      localStorage.removeItem('token')
+      window.location.href = '/login'
     }
 
     return Promise.reject(error)

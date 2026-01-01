@@ -1,138 +1,161 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/base/Card'
-import StatusBadge from '../../components/base/StatusBadge'
-import { useMyAssignments } from '../../hooks/useMyAssignments'
+import PageHeader from '../../components/base/PageHeader'
+import SectionBase from '../../components/layout/SectionBase'
+import AssignmentList from '../../components/base/AssignmentList'
+import api from '../../services/api'
 
-function riskTone(risk?: string) {
-  if (risk === 'CRITICAL') return 'critical'
-  if (risk === 'HIGH') return 'warning'
-  if (risk === 'MEDIUM') return 'warning'
-  return 'success'
+type Assignment = {
+  id: string
+  progress: number
+  track: {
+    id: string
+    title: string
+  }
+}
+
+type Me = {
+  name?: string
+  assignments?: Assignment[]
+  urgency?: 'NORMAL' | 'WARNING' | 'CRITICAL'
 }
 
 export default function CollaboratorDashboard() {
-  const { assignments, loading, error } =
-    useMyAssignments()
-
   const navigate = useNavigate()
-  const nextAssignment = assignments[0]
+  const [me, setMe] = useState<Me | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    api
+      .get('/me')
+      .then(res => {
+        if (!mounted) return
+        setMe(res.data)
+      })
+      .finally(() => mounted && setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const assignments = me?.assignments ?? []
+
+  const primaryAssignment = useMemo(
+    () => assignments.find(a => a.progress < 100),
+    [assignments],
+  )
+
+  const hasAssignments = assignments.length > 0
+
+  if (loading) {
+    return (
+      <SectionBase>
+        <div className="max-w-7xl mx-auto px-6 py-24 text-slate-400">
+          Carregando painel…
+        </div>
+      </SectionBase>
+    )
+  }
 
   return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Meu treinamento
-        </h1>
-        <p className="text-sm text-slate-400">
-          Acompanhe sua situação atual e conclua suas
-          atividades obrigatórias.
-        </p>
-      </div>
+    <SectionBase>
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-10">
+        <PageHeader
+          title={`Olá${me?.name ? `, ${me.name}` : ''}`}
+          subtitle="Este é o seu painel de execução."
+        />
 
-      {nextAssignment && (
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs text-slate-400">
-                Status atual
-              </div>
-              <div className="mt-2">
-                <StatusBadge
-                  label={nextAssignment.risk}
-                  tone={riskTone(nextAssignment.risk)}
-                />
-              </div>
-            </div>
+        {/* ESTADO SEM TAREFAS */}
+        {!hasAssignments && (
+          <Card className="p-10 bg-slate-900/80 border border-white/10">
+            <span className="inline-block mb-4 px-4 py-1.5 text-xs uppercase rounded-full border border-emerald-400/20 text-emerald-300 bg-emerald-500/5">
+              Tudo em dia
+            </span>
 
-            <div className="text-right">
-              <div className="text-xs text-slate-400">
-                Progresso
-              </div>
-              <div className="mt-1 text-2xl font-semibold">
-                {nextAssignment.progress}%
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
+            <h2 className="text-2xl font-semibold text-white">
+              Nenhuma tarefa pendente
+            </h2>
 
-      <Card>
-        <h2 className="font-medium mb-3">
-          Próxima ação obrigatória
-        </h2>
-
-        {loading ? (
-          <div className="text-sm text-slate-400">
-            Carregando suas trilhas…
-          </div>
-        ) : error ? (
-          <div className="text-sm text-red-400">
-            {error}
-          </div>
-        ) : !nextAssignment ? (
-          <div className="text-sm text-slate-400">
-            Nenhuma atividade pendente no momento.
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-6">
-            <div>
-              <div className="font-medium">
-                {nextAssignment.track.title}
-              </div>
-              <div className="text-xs text-slate-400">
-                Esta atividade é obrigatória para manter
-                conformidade.
-              </div>
-            </div>
-
-            <button
-              onClick={() =>
-                navigate(
-                  `/collaborator/assignment/${nextAssignment.id}`,
-                )
-              }
-              className="
-                rounded-lg
-                bg-blue-600
-                px-4
-                py-2
-                text-sm
-                font-medium
-                hover:bg-blue-500
-                transition
-              "
-            >
-              Iniciar atividade
-            </button>
-          </div>
+            <p className="mt-4 text-slate-300 max-w-xl">
+              No momento, não há atividades atribuídas a você.
+              Quando houver, elas aparecerão aqui com prioridade
+              clara.
+            </p>
+          </Card>
         )}
-      </Card>
 
-      <Card>
-        <h2 className="font-medium mb-3">
-          Minhas trilhas
-        </h2>
+        {/* ESTADO COM TAREFAS */}
+        {hasAssignments && (
+          <div className="grid gap-8 md:grid-cols-3">
+            {/* FOCO OPERACIONAL */}
+            <Card className="md:col-span-2 p-10 bg-slate-900/80 border border-white/10">
+              <h2 className="text-xl font-semibold text-white mb-6">
+                Prioridade agora
+              </h2>
 
-        {assignments.length === 0 ? (
-          <div className="text-sm text-slate-400">
-            Você não possui trilhas atribuídas.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {assignments.map(a => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between text-sm"
-              >
-                <div>{a.track.title}</div>
-                <div className="text-slate-400">
-                  {a.progress}%
+              {primaryAssignment ? (
+                <div className="space-y-4">
+                  <div className="text-slate-300">
+                    Continue a atividade:
+                    <span className="ml-2 font-medium text-white">
+                      {primaryAssignment.track.title}
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-slate-400">
+                    Progresso atual:{' '}
+                    {primaryAssignment.progress}%
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/collaborator/assignment/${primaryAssignment.id}`,
+                      )
+                    }
+                    className="mt-4 inline-flex px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-500 transition"
+                  >
+                    Continuar agora
+                  </button>
                 </div>
+              ) : (
+                <div className="text-slate-400">
+                  Todas as atividades estão concluídas.
+                </div>
+              )}
+
+              <div className="mt-10">
+                <AssignmentList assignments={assignments} />
               </div>
-            ))}
+            </Card>
+
+            {/* STATUS */}
+            <Card className="p-8 bg-slate-900/70 border border-white/10">
+              <div className="text-xs uppercase tracking-wider text-slate-400">
+                Situação atual
+              </div>
+
+              <div className="mt-4 text-2xl font-semibold text-white">
+                {me?.urgency === 'CRITICAL'
+                  ? 'Atenção imediata'
+                  : me?.urgency === 'WARNING'
+                  ? 'Alerta'
+                  : 'Normal'}
+              </div>
+
+              <p className="mt-4 text-sm text-slate-300">
+                {me?.urgency === 'CRITICAL'
+                  ? 'Você está com atividades paradas há tempo excessivo.'
+                  : me?.urgency === 'WARNING'
+                  ? 'Há risco de atraso se não houver avanço.'
+                  : 'Execução dentro do esperado.'}
+              </p>
+            </Card>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </SectionBase>
   )
 }

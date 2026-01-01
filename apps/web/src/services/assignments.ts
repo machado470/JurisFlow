@@ -1,20 +1,17 @@
 import api from './api'
 
-export type MyAssignment = {
-  id: string
-  progress: number
-  risk: string
-  track: {
-    id: string
-    title: string
-  }
+export async function startAssignment(id: string) {
+  const { data } = await api.post(`/assignments/${id}/start`)
+  return data
 }
 
-function unwrap<T>(res: any): T {
-  return res?.data?.data ?? res?.data ?? res
-}
-
-export async function listMyAssignments(): Promise<MyAssignment[]> {
-  const res = await api.get('/assignments/me')
-  return unwrap<MyAssignment[]>(res)
+export async function updateAssignmentProgress(
+  id: string,
+  progress: number,
+) {
+  const { data } = await api.patch(
+    `/assignments/${id}/progress`,
+    { progress },
+  )
+  return data
 }

@@ -8,8 +8,6 @@ import {
 } from '@nestjs/common'
 import { AssignmentsService } from './assignments.service'
 
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
 @Controller('assignments')
 export class AssignmentsController {
   constructor(
@@ -21,8 +19,9 @@ export class AssignmentsController {
     return this.assignments.list()
   }
 
+  // ✅ NOVO — atribuir trilha à pessoa
   @Post()
-  async create(
+  async assign(
     @Body()
     body: {
       personId: string
@@ -32,19 +31,20 @@ export class AssignmentsController {
     return this.assignments.createIfNotExists(body)
   }
 
+  @Post(':id/start')
+  async start(@Param('id') id: string) {
+    return this.assignments.start(id)
+  }
+
   @Patch(':id/progress')
   async updateProgress(
     @Param('id') id: string,
     @Body()
-    body: {
-      progress: number
-      risk: RiskLevel
-    },
+    body: { progress: number },
   ) {
     return this.assignments.updateProgress(
       id,
       body.progress,
-      body.risk,
     )
   }
 }

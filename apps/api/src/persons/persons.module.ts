@@ -7,6 +7,7 @@ import { PersonsService } from './persons.service'
 import { PersonsController } from './persons.controller'
 import { PersonsTimelineController } from './persons.timeline.controller'
 import { PersonsRiskHistoryController } from './persons.risk-history.controller'
+import { PersonsReminderController } from './persons.reminder.controller'
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PersonsRiskHistoryController } from './persons.risk-history.controller'
     PersonsController,
     PersonsTimelineController,
     PersonsRiskHistoryController,
+    PersonsReminderController,
   ],
   providers: [PersonsService],
   exports: [PersonsService],

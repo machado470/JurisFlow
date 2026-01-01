@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
+import AuthLayout from './AuthLayout'
 
 export default function ActivateAccount() {
   const [params] = useSearchParams()
@@ -10,15 +11,15 @@ export default function ActivateAccount() {
 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
+    setError(null)
 
     if (!token) {
-      setError('Token inválido')
+      setError('Convite inválido')
       return
     }
 
@@ -34,13 +35,14 @@ export default function ActivateAccount() {
 
     try {
       setLoading(true)
+
       await api.post('/auth/activate', {
         token,
         password,
       })
 
       navigate('/login')
-    } catch (err) {
+    } catch {
       setError('Convite inválido ou expirado')
     } finally {
       setLoading(false)
@@ -48,28 +50,28 @@ export default function ActivateAccount() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-slate-900 p-8 rounded-lg w-96 space-y-4"
-      >
-        <h1 className="text-xl font-bold text-white">
-          Ativar conta
-        </h1>
+    <AuthLayout>
+      <h2 className="text-2xl font-semibold text-white mb-6">
+        Ativar conta
+      </h2>
 
-        {error && (
-          <div className="bg-red-900/40 text-red-300 p-2 rounded text-sm">
-            {error}
-          </div>
-        )}
+      <p className="text-sm text-slate-400 mb-6">
+        Defina sua senha para acessar o sistema.
+      </p>
 
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="password"
           placeholder="Nova senha"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          className="w-full p-2 rounded bg-slate-800 text-white"
           required
+          className="
+            w-full rounded-lg bg-white/5
+            px-4 py-3 text-sm text-white
+            outline-none ring-1 ring-white/10
+            focus:ring-blue-500/40
+          "
         />
 
         <input
@@ -77,18 +79,34 @@ export default function ActivateAccount() {
           placeholder="Confirmar senha"
           value={confirm}
           onChange={e => setConfirm(e.target.value)}
-          className="w-full p-2 rounded bg-slate-800 text-white"
           required
+          className="
+            w-full rounded-lg bg-white/5
+            px-4 py-3 text-sm text-white
+            outline-none ring-1 ring-white/10
+            focus:ring-blue-500/40
+          "
         />
+
+        {error && (
+          <div className="text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded disabled:opacity-50"
+          className="
+            w-full rounded-lg bg-blue-600
+            px-4 py-3 text-sm font-medium text-white
+            hover:bg-blue-500 transition
+            disabled:opacity-50
+          "
         >
-          {loading ? 'Ativando...' : 'Ativar conta'}
+          {loading ? 'Ativando…' : 'Ativar conta'}
         </button>
       </form>
-    </div>
+    </AuthLayout>
   )
 }

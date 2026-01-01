@@ -1,59 +1,64 @@
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+import { PrismaClient, UserRole } from '@prisma/client'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('🌱 Seed JurisFlow iniciado')
 
-  // 1. Organização (idempotente)
+  const password = await bcrypt.hash('123456', 10)
+
   const org = await prisma.organization.upsert({
-    where: { slug: 'jurisflow-demo' },
+    where: { slug: 'demo' },
     update: {},
     create: {
-      name: 'JurisFlow Demo',
-      slug: 'jurisflow-demo',
+      name: 'Organização Demo',
+      slug: 'demo',
+      requiresOnboarding: false,
     },
   })
 
-  // 2. Pessoa admin (idempotente por org + role)
-  const person =
-    (await prisma.person.findFirst({
-      where: {
-        orgId: org.id,
-        role: 'ADMIN',
-      },
-    })) ??
-    (await prisma.person.create({
-      data: {
-        name: 'Administrador',
-        role: 'ADMIN',
-        orgId: org.id,
-      },
-    }))
-
-  // 3. Usuário admin (idempotente por email)
-  await prisma.user.upsert({
-    where: { email: 'admin@jurisflow.local' },
-    update: {},
-    create: {
-      email: 'admin@jurisflow.local',
-      password: await bcrypt.hash('admin123', 10),
-      role: 'ADMIN',
-      orgId: org.id,
-      personId: person.id,
+  const user = await prisma.user.upsert({
+    where: { email: 'admin@demo.com' },
+    update: {
+      password,
       active: true,
+      orgId: org.id,
+    },
+    create: {
+      email: 'admin@demo.com',
+      password,
+      role: UserRole.ADMIN,
+      active: true,
+      orgId: org.id,
     },
   })
 
-  console.log('✅ Seed finalizado com sucesso')
+  await prisma.person.upsert({
+    where: { userId: user.id },
+    update: {
+      name: 'Admin Demo',
+      role: 'ADMIN',
+      active: true,
+      orgId: org.id,
+    },
+    create: {
+      name: 'Admin Demo',
+      role: 'ADMIN',
+      active: true,
+      orgId: org.id,
+      userId: user.id,
+    },
+  })
+
+  console.log('✅ Usuário ADMIN criado')
+  console.log('📧 admin@demo.com')
+  console.log('🔑 123456')
 }
 
 main()
   .catch(e => {
-    console.error('❌ Seed falhou', e)
+    console.error(e)
     process.exit(1)
   })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+  .finally(() => prisma.$disconnect())

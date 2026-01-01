@@ -22,8 +22,8 @@ export default function AdminSidebar() {
   const [risk, setRisk] = useState<RiskSummary | null>(null)
 
   useEffect(() => {
-    getExecutiveReport('default')
-      .then(res => setRisk(res.data.summary))
+    getExecutiveReport()
+      .then(report => setRisk(report.summary))
       .catch(() => {})
   }, [])
 
@@ -64,7 +64,6 @@ export default function AdminSidebar() {
         ${styles.border}
       `}
     >
-      {/* LOGO */}
       <div className="px-6 py-6">
         <div className={`text-lg font-semibold ${styles.text}`}>
           JurisFlow
@@ -74,7 +73,6 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/* MENU */}
       <nav className="flex-1 px-3">
         <ul className="space-y-1">
           {links.map(link => (
@@ -103,7 +101,6 @@ export default function AdminSidebar() {
         </ul>
       </nav>
 
-      {/* RODAPÉ */}
       <div className="px-6 py-4 text-xs opacity-40">
         © JurisFlow
       </div>

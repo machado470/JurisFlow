@@ -1,29 +1,20 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
 export default function RequireAuth({
-  children,
   role,
 }: {
-  children: JSX.Element
   role?: 'ADMIN' | 'COLLABORATOR'
 }) {
-  const { token, user } = useAuth()
-  const location = useLocation()
+  const { user, loading } = useAuth()
 
-  if (!token || !user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location }}
-      />
-    )
-  }
+  if (loading) return <div>Carregando…</div>
+
+  if (!user) return <Navigate to="/login" replace />
 
   if (role && user.role !== role) {
     return <Navigate to="/login" replace />
   }
 
-  return children
+  return <Outlet />
 }

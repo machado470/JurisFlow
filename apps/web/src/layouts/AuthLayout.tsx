@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 type Props = {
   children: ReactNode
@@ -7,7 +7,6 @@ type Props = {
 export default function AuthLayout({ children }: Props) {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-      {/* Lado institucional */}
       <div className="
         hidden
         lg:flex
@@ -36,7 +35,6 @@ export default function AuthLayout({ children }: Props) {
         </ul>
       </div>
 
-      {/* Lado login */}
       <div className="
         flex
         items-center

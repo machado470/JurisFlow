@@ -1,19 +1,23 @@
-import { Module } from '@nestjs/common'
-import { AssessmentsService } from './assessments.service'
+import { Module, forwardRef } from '@nestjs/common'
+import { PrismaService } from '../prisma/prisma.service'
+
 import { AssessmentsController } from './assessments.controller'
-import { PrismaModule } from '../prisma/prisma.module'
-import { AuditModule } from '../audit/audit.module'
+import { AssessmentsService } from './assessments.service'
+
 import { RiskModule } from '../risk/risk.module'
+import { AuditModule } from '../audit/audit.module'
+import { CorrectiveActionsModule } from '../corrective-actions/corrective-actions.module'
 
 @Module({
   imports: [
-    PrismaModule,
-    AuditModule,
     RiskModule,
+    AuditModule,
+    forwardRef(() => CorrectiveActionsModule),
   ],
   controllers: [AssessmentsController],
   providers: [
     AssessmentsService,
+    PrismaService,
   ],
 })
 export class AssessmentsModule {}

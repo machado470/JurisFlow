@@ -18,6 +18,7 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
+      include: { person: true },
     })
 
     if (!user || !user.password) {
@@ -25,8 +26,12 @@ export class AuthService {
     }
 
     if (!user.active) {
+      throw new UnauthorizedException('Conta não ativada')
+    }
+
+    if (!user.person) {
       throw new UnauthorizedException(
-        'Conta ainda não ativada',
+        'Usuário sem identidade operacional',
       )
     }
 
@@ -39,7 +44,7 @@ export class AuthService {
       sub: user.id,
       role: user.role,
       orgId: user.orgId,
-      personId: user.personId,
+      personId: user.person.id,
     })
 
     return {
@@ -48,12 +53,12 @@ export class AuthService {
         id: user.id,
         role: user.role,
         orgId: user.orgId,
-        personId: user.personId,
+        personId: user.person.id,
       },
     }
   }
 
-  async inviteCollaborator(email: string, personId: string) {
+  async inviteCollaborator(email: string) {
     const token = randomUUID()
 
     const user = await this.prisma.user.update({
@@ -62,7 +67,7 @@ export class AuthService {
         inviteToken: token,
         inviteExpiresAt: new Date(
           Date.now() + 1000 * 60 * 60 * 24,
-        ), // 24h
+        ),
         active: false,
       },
     })

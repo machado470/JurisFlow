@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useTheme } from '../../theme/useTheme'
 
 type Props = {
@@ -32,4 +32,3 @@ export default function PageHeader({
     </div>
   )
 }
-

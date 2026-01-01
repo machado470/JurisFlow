@@ -1,32 +1,22 @@
-import { Controller, Get, UseGuards } from '@nestjs/common'
+import {
+  Controller,
+  Get,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { ReportsService } from './reports.service'
-import { Org } from '../auth/decorators/org.decorator'
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 
-@UseGuards(JwtAuthGuard)
 @Controller('reports')
+@UseGuards(JwtAuthGuard)
 export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
   ) {}
 
+  // 📊 Relatório executivo (risco operacional)
   @Get('executive')
-  async executive(@Org() orgId: string) {
-    const summary =
-      await this.reports.executiveSummary(orgId)
-
-    const peopleAtRisk =
-      await this.reports.peopleAtRisk(orgId)
-
-    return {
-      summary,
-      peopleAtRisk,
-      generatedAt: new Date(),
-    }
-  }
-
-  @Get('pending')
-  async pending(@Org() orgId: string) {
-    return this.reports.pending(orgId)
+  executive(@Req() req: any) {
+    return this.reports.executive(req.user.orgId)
   }
 }

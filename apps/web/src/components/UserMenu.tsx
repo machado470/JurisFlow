@@ -14,7 +14,7 @@ export default function UserMenu() {
       `}
     >
       <div className="font-medium">
-        {user?.name ?? 'Usuário'}
+        {user?.email ?? 'Usuário'}
       </div>
       <div className="text-xs opacity-60">
         {user?.role ?? '—'}

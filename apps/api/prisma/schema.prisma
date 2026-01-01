@@ -7,53 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
 enum UserRole {
   ADMIN
   COLLABORATOR
 }
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
+  id                 String   @id @default(uuid())
+  name               String
+  slug               String   @unique
+  requiresOnboarding Boolean  @default(true)
+  createdAt          DateTime @default(now())
 
   users   User[]
   persons Person[]
-}
-
-model Person {
-  id     String  @id @default(uuid())
-  name   String
-  email  String?
-  role   String
-  active Boolean @default(true)
-
-  orgId String
-  org   Organization @relation(fields: [orgId], references: [id])
-
-  riskScore Int @default(0)
-
-  user User?
-
-  assignments Assignment[]
-  assessments Assessment[]
-
-  auditEvents AuditEvent[]
-  events      Event[]
-
-  correctiveActions CorrectiveAction[]
-  riskSnapshots     RiskSnapshot[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model User {
@@ -69,105 +36,25 @@ model User {
   orgId String
   org   Organization @relation(fields: [orgId], references: [id])
 
-  personId String? @unique
-  person   Person? @relation(fields: [personId], references: [id])
+  person Person?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Track {
-  id          String  @id @default(uuid())
-  slug        String  @unique
-  title       String
-  description String?
+model Person {
+  id     String  @id @default(uuid())
+  name   String
+  email  String?
+  role   String
+  active Boolean @default(true)
 
-  assignments Assignment[]
-  assessments Assessment[]
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Assignment {
-  id       String @id @default(uuid())
-  personId String
-  trackId  String
-
-  progress Int       @default(0)
-  risk     RiskLevel @default(LOW)
-
-  person Person @relation(fields: [personId], references: [id])
-  track  Track  @relation(fields: [trackId], references: [id])
-
-  assessments Assessment[]
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([personId, trackId])
-}
-
-model Assessment {
-  id           String @id @default(uuid())
-  assignmentId String
-  personId     String
-  trackId      String
-
-  score Int
-  risk  RiskLevel
-  notes String?
-
-  assignment Assignment @relation(fields: [assignmentId], references: [id])
-  person     Person     @relation(fields: [personId], references: [id])
-  track      Track      @relation(fields: [trackId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-model AuditEvent {
-  id       String  @id @default(uuid())
-  personId String?
-  action   String
-  context  String?
-
-  person Person? @relation(fields: [personId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-model Event {
-  id          String   @id @default(uuid())
-  type        String
-  severity    String?
-  description String?
-  metadata    Json?
-
-  personId String
-  person   Person @relation(fields: [personId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-model CorrectiveAction {
-  id     String @id @default(uuid())
-  reason String
-  status String @default("OPEN")
-
-  personId String
-  person   Person @relation(fields: [personId], references: [id])
-
-  createdAt  DateTime @default(now())
-  resolvedAt DateTime?
-}
-
-model RiskSnapshot {
-  id       String   @id @default(uuid())
-  personId String
-  score    Int
-  reason   String
-
-  person Person @relation(fields: [personId], references: [id])
-
-  createdAt DateTime @default(now())
 }

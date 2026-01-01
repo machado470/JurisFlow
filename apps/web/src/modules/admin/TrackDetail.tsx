@@ -1,80 +1,122 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
-import api from '../../services/api'
-
-type PersonTrack = {
-  personId: string
-  name: string
-  role: string
-  progress: number
-}
-
-type Track = {
-  id: string
-  title: string
-  description?: string
-  people: PersonTrack[]
-}
+import {
+  getTrack,
+  assignPeopleToTrack,
+  type Track,
+} from '../../services/tracks'
+import { usePersons } from '../../hooks/usePersons'
 
 export default function TrackDetail() {
-  const { id } = useParams()
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+
   const [track, setTrack] = useState<Track | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const {
+    data: people,
+    loading: loadingPeople,
+  } = usePersons()
 
   useEffect(() => {
-    async function load() {
-      const res = await api.get(`/tracks/${id}`)
-      setTrack(res.data)
-    }
-
-    load()
+    if (!id) return
+    getTrack(id).then(setTrack)
   }, [id])
 
+  function toggle(personId: string) {
+    setSelected(prev =>
+      prev.includes(personId)
+        ? prev.filter(id => id !== personId)
+        : [...prev, personId],
+    )
+  }
+
+  async function handleAssign() {
+    if (!id || selected.length === 0) return
+
+    try {
+      setSaving(true)
+      setError(null)
+      await assignPeopleToTrack({
+        trackId: id,
+        personIds: selected,
+      })
+      setSelected([])
+      const updated = await getTrack(id)
+      setTrack(updated)
+    } catch {
+      setError('Erro ao atribuir pessoas à trilha')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (!track) {
-    return <div className="opacity-60">Carregando…</div>
+    return (
+      <div className="text-sm text-slate-400">
+        Carregando trilha…
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         title={track.title}
         description={track.description}
         right={
-          <Link
-            to="/admin/tracks"
-            className="text-sm text-blue-500"
+          <button
+            onClick={() => navigate('/admin/tracks')}
+            className="text-sm opacity-70 hover:opacity-100"
           >
-            ← Voltar
-          </Link>
+            Voltar
+          </button>
         }
       />
 
-      <Card>
-        {track.people.length === 0 ? (
-          <div className="text-sm opacity-60">
-            Nenhuma pessoa atribuída.
+      <Card className="space-y-4">
+        <div className="text-sm text-slate-400">
+          Pessoas atribuídas: {track.assignmentsCount}
+        </div>
+
+        {loadingPeople ? (
+          <div className="text-sm text-slate-400">
+            Carregando pessoas…
           </div>
         ) : (
-          <div className="space-y-3">
-            {track.people.map(p => (
-              <div
-                key={p.personId}
-                className="flex justify-between text-sm"
+          <div className="space-y-2">
+            {people.map(p => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2 text-sm"
               >
-                <div>
-                  <div className="font-medium">
-                    {p.name}
-                  </div>
-                  <div className="opacity-60">
-                    {p.role}
-                  </div>
-                </div>
-                <div>{p.progress}%</div>
-              </div>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(p.id)}
+                  onChange={() => toggle(p.id)}
+                />
+                <span>{p.name}</span>
+              </label>
             ))}
           </div>
         )}
+
+        {error && (
+          <div className="text-sm text-red-400">{error}</div>
+        )}
+
+        <button
+          onClick={handleAssign}
+          disabled={saving || selected.length === 0}
+          className="mt-4 rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+        >
+          {saving ? 'Salvando…' : 'Atribuir pessoas'}
+        </button>
       </Card>
     </div>
   )

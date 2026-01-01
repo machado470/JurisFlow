@@ -9,26 +9,14 @@ import { PrismaService } from '../prisma/prisma.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { RiskSnapshotService } from '../risk/risk-snapshot.service'
 
-type TimelineItem =
-  | {
-      type: 'AUDIT'
-      title: string
-      description?: string
-      createdAt: Date
-    }
-  | {
-      type: 'SYSTEM'
-      title: string
-      description?: string
-      createdAt: Date
-    }
-  | {
-      type: 'RISK'
-      title: string
-      description: string
-      score: number
-      createdAt: Date
-    }
+type TimelineItem = {
+  type: 'AUDIT' | 'SYSTEM' | 'RISK'
+  title: string
+  description?: string
+  impact?: string
+  tone: 'info' | 'warning' | 'critical' | 'success'
+  createdAt: Date
+}
 
 @Controller('persons')
 @UseGuards(JwtAuthGuard)
@@ -45,28 +33,22 @@ export class PersonsTimelineController {
   ) {
     const orgId = req.user.orgId
 
-    // valida pessoa
     const person = await this.prisma.person.findFirst({
       where: { id: personId, orgId },
     })
 
-    if (!person) {
-      return []
-    }
+    if (!person) return []
 
-    // 1) ações humanas
     const auditEvents =
       await this.prisma.auditEvent.findMany({
         where: { personId },
       })
 
-    // 2) eventos sistêmicos
     const systemEvents =
       await this.prisma.event.findMany({
         where: { personId },
       })
 
-    // 3) snapshots de risco
     const riskSnapshots =
       await this.snapshots.listByPerson(personId)
 
@@ -75,6 +57,7 @@ export class PersonsTimelineController {
         type: 'AUDIT',
         title: this.humanizeAuditAction(e.action),
         description: e.context ?? undefined,
+        tone: 'info',
         createdAt: e.createdAt,
       }))
 
@@ -82,7 +65,10 @@ export class PersonsTimelineController {
       systemEvents.map(e => ({
         type: 'SYSTEM',
         title: this.humanizeSystemEvent(e.type),
-        description: e.description ?? undefined,
+        description:
+          e.description ??
+          'Evento registrado automaticamente pelo sistema.',
+        tone: this.toneFromSystemEvent(e.type),
         createdAt: e.createdAt,
       }))
 
@@ -94,7 +80,11 @@ export class PersonsTimelineController {
             ? 'Risco aumentado'
             : 'Risco reduzido',
         description: s.reason,
-        score: s.score,
+        impact:
+          s.score > 0
+            ? `+${s.score} pontos de risco`
+            : `${s.score} pontos de risco`,
+        tone: s.score > 0 ? 'warning' : 'success',
         createdAt: s.createdAt,
       }))
 
@@ -109,11 +99,16 @@ export class PersonsTimelineController {
     )
   }
 
+  // ----------------------------
+  // HUMANIZAÇÃO
+  // ----------------------------
+
   private humanizeAuditAction(action: string) {
     const map: Record<string, string> = {
       ASSIGNMENT_CREATED: 'Trilha atribuída',
       ASSIGNMENT_UPDATED: 'Progresso atualizado',
-      ASSESSMENT_SUBMITTED: 'Avaliação concluída',
+      ASSESSMENT_SUBMITTED:
+        'Avaliação concluída',
     }
 
     return map[action] ?? action
@@ -127,8 +122,35 @@ export class PersonsTimelineController {
         'Ação corretiva criada',
       CORRECTIVE_ACTION_RESOLVED:
         'Ação corretiva resolvida',
+      ASSIGNMENT_INERTIA:
+        'Inatividade prolongada detectada',
+      CORRECTIVE_ACTION_OVERDUE:
+        'Ação corretiva em atraso',
+      MANUAL_REMINDER_SENT:
+        'Lembrete manual enviado pelo administrador',
     }
 
-    return map[type] ?? type
+    return map[type] ?? 'Evento do sistema'
+  }
+
+  private toneFromSystemEvent(
+    type: string,
+  ): TimelineItem['tone'] {
+    if (
+      type === 'CORRECTIVE_ACTION_OVERDUE' ||
+      type === 'ASSIGNMENT_INERTIA'
+    )
+      return 'critical'
+
+    if (type === 'CORRECTIVE_ACTION_CREATED')
+      return 'warning'
+
+    if (type === 'CORRECTIVE_ACTION_RESOLVED')
+      return 'success'
+
+    if (type === 'MANUAL_REMINDER_SENT')
+      return 'info'
+
+    return 'info'
   }
 }

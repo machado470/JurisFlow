@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { submitAssessment } from '../../services/assessments'
+import { useNavigate } from 'react-router-dom'
 
 type Assignment = {
   id: string
@@ -8,37 +7,14 @@ type Assignment = {
     id: string
     title: string
   }
-  personId: string
 }
 
 export default function AssignmentList({
   assignments,
-  personId,
-  onSubmitted,
 }: {
   assignments: Assignment[]
-  personId: string
-  onSubmitted?: () => void
 }) {
-  const [open, setOpen] = useState<string | null>(null)
-  const [score, setScore] = useState(0)
-  const [loading, setLoading] = useState(false)
-
-  async function submit(assignment: Assignment) {
-    setLoading(true)
-
-    await submitAssessment({
-      assignmentId: assignment.id,
-      personId,
-      trackId: assignment.track.id,
-      score,
-    })
-
-    setOpen(null)
-    setScore(0)
-    setLoading(false)
-    onSubmitted?.()
-  }
+  const navigate = useNavigate()
 
   return (
     <div className="space-y-4">
@@ -59,37 +35,13 @@ export default function AssignmentList({
 
             <button
               className="text-sm bg-blue-600 px-3 py-1 rounded"
-              onClick={() => setOpen(a.id)}
+              onClick={() =>
+                navigate(`/collaborator/assessment/${a.id}`)
+              }
             >
               Avaliar
             </button>
           </div>
-
-          {open === a.id && (
-            <div className="pt-3 space-y-2">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={score}
-                onChange={e =>
-                  setScore(Number(e.target.value))
-                }
-                className="w-full bg-slate-800 rounded px-3 py-2"
-                placeholder="Score (0–100)"
-              />
-
-              <button
-                disabled={loading}
-                onClick={() => submit(a)}
-                className="w-full bg-green-600 py-2 rounded font-medium"
-              >
-                {loading
-                  ? 'Salvando…'
-                  : 'Enviar avaliação'}
-              </button>
-            </div>
-          )}
         </div>
       ))}
     </div>

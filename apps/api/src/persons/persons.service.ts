@@ -81,6 +81,7 @@ export class PersonsService {
         email,
         password: passwordHash,
         role,
+        active: true,
         org: { connect: { id: orgId } },
       },
     })
@@ -94,6 +95,31 @@ export class PersonsService {
         user: { connect: { id: user.id } },
       },
     })
+
+    // 🔗 GARANTE RELAÇÃO BIDIRECIONAL
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { personId: person.id },
+    })
+
+    // 🔥 REGRA FINAL DE ONBOARDING
+    if (role === 'ADMIN') {
+      const adminCount = await this.prisma.user.count({
+        where: {
+          orgId,
+          role: 'ADMIN',
+          active: true,
+          personId: { not: null },
+        },
+      })
+
+      if (adminCount === 1 && org.requiresOnboarding) {
+        await this.prisma.organization.update({
+          where: { id: orgId },
+          data: { requiresOnboarding: false },
+        })
+      }
+    }
 
     const tracks = await this.prisma.track.findMany()
 

@@ -1,86 +1,90 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, OnModuleInit } from '@nestjs/common'
+import { ModuleRef } from '@nestjs/core'
 import { PrismaService } from '../prisma/prisma.service'
-import { AuditService } from '../audit/audit.service'
-import { RiskSnapshotService } from '../risk/risk-snapshot.service'
 import { RiskService } from '../risk/risk.service'
+import { RiskSnapshotService } from '../risk/risk-snapshot.service'
+import { AuditService } from '../audit/audit.service'
+import { CorrectiveActionsService } from '../corrective-actions/corrective-actions.service'
+import { RiskLevel } from '@prisma/client'
 
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+type SubmitAssessmentDto = {
+  assignmentId: string
+  score: number
+  notes?: string
+}
 
 @Injectable()
-export class AssessmentsService {
+export class AssessmentsService implements OnModuleInit {
+  private corrective!: CorrectiveActionsService
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
-    private readonly riskSnapshots: RiskSnapshotService,
     private readonly risk: RiskService,
+    private readonly snapshots: RiskSnapshotService,
+    private readonly audit: AuditService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
-  async submit(data: {
-    assignmentId: string
-    score: number
-    notes?: string
-  }) {
+  onModuleInit() {
+    this.corrective = this.moduleRef.get(
+      CorrectiveActionsService,
+      { strict: false },
+    )
+  }
+
+  private calculateRisk(score: number): RiskLevel {
+    if (score >= 80) return RiskLevel.LOW
+    if (score >= 60) return RiskLevel.MEDIUM
+    if (score >= 40) return RiskLevel.HIGH
+    return RiskLevel.CRITICAL
+  }
+
+  async submit(dto: SubmitAssessmentDto) {
     const assignment = await this.prisma.assignment.findUnique({
-      where: { id: data.assignmentId },
+      where: { id: dto.assignmentId },
+      include: { person: true, track: true },
     })
 
-    if (!assignment) {
-      throw new NotFoundException('Assignment não encontrado')
+    if (!assignment || !assignment.personId) {
+      throw new Error('Assignment inválido')
     }
 
-    const risk = this.calculateRiskFromScore(data.score)
+    const risk = this.calculateRisk(dto.score)
 
     const assessment = await this.prisma.assessment.create({
       data: {
         assignmentId: assignment.id,
         personId: assignment.personId,
         trackId: assignment.trackId,
-        score: data.score,
+        score: dto.score,
         risk,
-        notes: data.notes,
+        notes: dto.notes,
       },
+    })
+
+    await this.risk.recalculatePersonRisk(
+      assignment.personId,
+    )
+
+    await this.snapshots.record({
+      personId: assignment.personId,
+      score: dto.score,
+      reason: 'Avaliação submetida',
     })
 
     await this.audit.log({
       personId: assignment.personId,
       action: 'ASSESSMENT_SUBMITTED',
-      context: `Score ${data.score} · Risco ${risk}`,
+      context: `assignment=${assignment.id} score=${dto.score}`,
     })
 
-    const delta = this.calculateRiskDeltaFromScore(data.score)
-
-    if (delta > 0) {
-      await this.prisma.event.create({
-        data: {
-          personId: assignment.personId,
-          type: 'ASSESSMENT_NEGATIVE',
-          severity: risk,
-          description: `Assessment com score ${data.score}`,
-          metadata: { score: data.score, delta },
-        },
-      })
-
-      await this.riskSnapshots.record({
+    if (risk === RiskLevel.CRITICAL) {
+      await this.corrective.create({
         personId: assignment.personId,
-        score: delta,
-        reason: `Assessment score ${data.score}`,
+        reason: 'Avaliação com risco crítico',
       })
-
-      await this.risk.recalculatePersonRisk(assignment.personId)
     }
 
     return assessment
-  }
-
-  private calculateRiskFromScore(score: number): RiskLevel {
-    if (score < 50) return 'HIGH'
-    if (score < 70) return 'MEDIUM'
-    return 'LOW'
-  }
-
-  private calculateRiskDeltaFromScore(score: number): number {
-    if (score < 50) return 20
-    if (score < 70) return 10
-    return 0
   }
 }

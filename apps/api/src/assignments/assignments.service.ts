@@ -1,82 +1,77 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { AuditService } from '../audit/audit.service'
-
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
 @Injectable()
 export class AssignmentsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  list() {
+  // 🔹 LISTAR TODOS (ADMIN)
+  async list() {
     return this.prisma.assignment.findMany({
       include: {
-        person: true,
-        track: true,
+        person: {
+          select: { id: true, name: true },
+        },
+        track: {
+          select: { id: true, title: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     })
   }
 
-  async getActivePeople() {
-    return this.prisma.person.findMany({
-      where: { active: true },
-      select: { id: true },
+  // 🔹 LISTAR POR PESSOA (COLLABORATOR)
+  async findByPerson(personId: string) {
+    return this.prisma.assignment.findMany({
+      where: { personId },
+      include: {
+        track: {
+          select: { id: true, title: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     })
   }
 
-  async createIfNotExists(data: {
+  // 🔹 CRIAR ASSIGNMENT SE NÃO EXISTIR
+  async createIfNotExists(params: {
     personId: string
     trackId: string
   }) {
-    const exists = await this.prisma.assignment.findUnique({
+    const existing = await this.prisma.assignment.findUnique({
       where: {
         personId_trackId: {
-          personId: data.personId,
-          trackId: data.trackId,
+          personId: params.personId,
+          trackId: params.trackId,
         },
       },
     })
 
-    if (exists) return exists
+    if (existing) return existing
 
-    const assignment = await this.prisma.assignment.create({
+    return this.prisma.assignment.create({
       data: {
-        personId: data.personId,
-        trackId: data.trackId,
-        progress: 0,
-        risk: 'LOW',
+        personId: params.personId,
+        trackId: params.trackId,
       },
     })
-
-    await this.audit.log({
-      personId: assignment.personId,
-      action: 'ASSIGNMENT_CREATED',
-      context: 'Trilha atribuída',
-    })
-
-    return assignment
   }
 
-  async updateProgress(
-    id: string,
-    progress: number,
-    risk: RiskLevel,
-  ) {
-    const assignment = await this.prisma.assignment.update({
+  // 🔹 INICIAR EXECUÇÃO
+  async start(id: string) {
+    return this.prisma.assignment.update({
       where: { id },
-      data: { progress, risk },
+      data: {
+        progress: 0,
+      },
     })
+  }
 
-    await this.audit.log({
-      personId: assignment.personId,
-      action: 'ASSIGNMENT_UPDATED',
-      context: `Progresso ${progress}% · Risco ${risk}`,
+  // 🔹 ATUALIZAR PROGRESSO
+  async updateProgress(id: string, progress: number) {
+    return this.prisma.assignment.update({
+      where: { id },
+      data: { progress },
     })
-
-    return assignment
   }
 }
