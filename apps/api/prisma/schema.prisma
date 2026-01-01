@@ -8,107 +8,53 @@ datasource db {
 }
 
 enum UserRole {
-  STUDENT
   ADMIN
+  COLLABORATOR
+}
+
+model Organization {
+  id                 String   @id @default(uuid())
+  name               String
+  slug               String   @unique
+  requiresOnboarding Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  users   User[]
+  persons Person[]
 }
 
 model User {
-  id               String   @id @default(uuid())
-  name             String
-  email            String   @unique
-  passwordHash     String
-  role             UserRole @default(STUDENT)
-  xp               Int      @default(0)
-  refreshTokenHash String?
+  id       String   @id @default(uuid())
+  email    String   @unique
+  password String?
+  role     UserRole
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  active          Boolean  @default(false)
+  inviteToken     String?  @unique
+  inviteExpiresAt DateTime?
 
-  progress         StudentProgress[]
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
+
+  person Person?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model Category {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model Person {
+  id     String  @id @default(uuid())
+  name   String
+  email  String?
+  role   String
+  active Boolean @default(true)
 
-  phases      Phase[]
-  lessons     Lesson[]
-  questions   Question[]
-}
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
 
-model Phase {
-  id         String    @id @default(uuid())
-  name       String
-  order      Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
 
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-
-  lessons      Lesson[]
-  questions    Question[]
-  progress     StudentProgress[]
-
-  @@unique([categoryId, name])
-}
-
-model Lesson {
-  id         String    @id @default(uuid())
-  title      String
-  content    String?
-  imageUrl   String?
-  videoUrl   String?
-  order      Int        @default(0)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-
-  phaseId    String
-  categoryId String
-
-  category   Category   @relation(fields: [categoryId], references: [id])
-  phase      Phase      @relation(fields: [phaseId], references: [id])
-}
-
-model Question {
-  id          String   @id @default(uuid())
-  statement   String
-  optionA     String
-  optionB     String
-  optionC     String
-  optionD     String
-  correct     String
-  explanation String?
-
-  order       Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  categoryId  String
-  category    Category   @relation(fields: [categoryId], references: [id])
-
-  phaseId     String
-  phase       Phase      @relation(fields: [phaseId], references: [id])
-
-  @@unique([categoryId, statement])
-}
-
-model StudentProgress {
-  id               String   @id @default(uuid())
-  userId           String
-  phaseId          String
-  lessonsCompleted Int      @default(0)
-  correctAnswers   Int      @default(0)
-  finished         Boolean  @default(false)
-
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  user             User     @relation(fields: [userId], references: [id])
-  phase            Phase    @relation(fields: [phaseId], references: [id])
-
-  @@unique([userId, phaseId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -9,9 +9,17 @@
     "experimentalDecorators": true,
     "strict": false,
     "baseUrl": "./",
-    "paths": { "*": ["*"] },
     "outDir": "dist",
     "rootDir": "src",
+
+    "types": [
+      "node",
+      "express",
+      "passport",
+      "passport-jwt",
+      "passport-local"
+    ],
+
     "skipLibCheck": true,
     "esModuleInterop": true
   },

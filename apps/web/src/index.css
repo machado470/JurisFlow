@@ -1,24 +1,12 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: Inter, sans-serif;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/*
+  O fundo e as cores do sistema
+  são controlados exclusivamente
+  pelo ThemeProvider.
+*/
 body {
-  background-color: var(--background);
-  color: var(--text);
-  transition: background 0.2s ease, color 0.2s ease;
+  @apply antialiased;
 }
-
-:root {
-  --background: #F7F7F7;
-  --text: #1A1A1A;
-}
-
-[data-theme='dark'] {
-  --background: #121212;
-  --text: #FFFFFF;
-}
-	
-

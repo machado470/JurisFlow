@@ -1,45 +1,58 @@
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from 'react-router-dom'
+import RequireAuth from '../auth/RequireAuth'
 
-import LandingPage from "../modules/landing/LandingPage";
-import Login from "../modules/auth/Login";
-import StudentDashboard from "../modules/student/StudentDashboard";
-import AdminDashboard from "../modules/admin/AdminDashboard";
+// PUBLIC
+import LandingPage from '../modules/landing/LandingPage'
+import Login from '../modules/auth/Login'
 
-import RequireAuth from "./RequireAuth";
+// ADMIN
+import AdminLayout from '../modules/admin/AdminLayout'
+import AdminDashboard from '../modules/admin/AdminDashboard'
+
+// EXECUÇÃO (REAPROVEITADA)
+import CollaboratorDashboard from '../modules/collaborator/CollaboratorDashboard'
+import AssignmentExecution from '../modules/collaborator/AssignmentExecution'
 
 export default function Router() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
+      {/* PUBLIC */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
 
-        {/* Rota pública */}
-        <Route path="/" element={<LandingPage />} />
+      {/* ADMIN */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth role="ADMIN">
+            <AdminLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+      </Route>
 
-        {/* Login público */}
-        <Route path="/login" element={<Login />} />
+      {/* EXECUÇÃO (ADMIN PODE EXECUTAR) */}
+      <Route
+        path="/execucao"
+        element={
+          <RequireAuth role="ADMIN">
+            <CollaboratorDashboard />
+          </RequireAuth>
+        }
+      />
 
-        {/* ÁREA DO ALUNO */}
-        <Route
-          path="/aluno"
-          element={
-            <RequireAuth allowed={["STUDENT"]}>
-              <StudentDashboard />
-            </RequireAuth>
-          }
-        />
+      <Route
+        path="/execucao/assignment/:assignmentId"
+        element={
+          <RequireAuth role="ADMIN">
+            <AssignmentExecution />
+          </RequireAuth>
+        }
+      />
 
-        {/* ÁREA DO ADMIN */}
-        <Route
-          path="/admin"
-          element={
-            <RequireAuth allowed={["ADMIN"]}>
-              <AdminDashboard />
-            </RequireAuth>
-          }
-        />
-
-      </Routes>
-    </BrowserRouter>
-  );
+      {/* FALLBACK */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  )
 }

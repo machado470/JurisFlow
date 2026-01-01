@@ -1,49 +1,70 @@
-import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
 
-// CORE
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma/prisma.module'
+import { HealthModule } from './health/health.module'
+import { AuthModule } from './auth/auth.module'
+import { MeModule } from './me/me.module'
+import { OnboardingModule } from './onboarding/onboarding.module'
 
-// DOMÍNIOS
-import { CategoriesModule } from './categories/categories.module';
-import { PhasesModule } from './phases/phases.module';
-import { LessonsModule } from './lessons/lessons.module';
-import { QuestionsModule } from './questions/questions.module';
-import { ProgressModule } from './progress/progress.module';
-import { StatsModule } from './stats/stats.module';
-import { UsersModule } from './users/users.module';
+// núcleo de pessoas
+import { PersonsModule } from './persons/persons.module'
+import { PeopleModule } from './people/people.module'
 
-// ALUNO
-import { StudentsModule } from './students/students.module';
+// domínio educacional
+import { TracksModule } from './tracks/tracks.module'
+import { AssignmentsModule } from './assignments/assignments.module'
+import { AssessmentsModule } from './assessments/assessments.module'
 
-// ADMIN (NOVO)
-import { AdminModule } from './admin/admin.module';
+// risco, tempo e auditoria
+import { RiskModule } from './risk/risk.module'
+import { AuditModule } from './audit/audit.module'
 
-// HEALTHCHECK
-import { HealthModule } from './health/health.module';
+// ações corretivas e relatórios
+import { CorrectiveActionsModule } from './corrective-actions/corrective-actions.module'
+import { ReportsModule } from './reports/reports.module'
+
+// leitura estratégica
+import { PendingModule } from './pending/pending.module'
+import { AdminModule } from './admin/admin.module'
+
+// timeline
+import { TimelineModule } from './timeline/timeline.module'
+
+// exceções humanas
+import { ExceptionsModule } from './exceptions/exceptions.module'
 
 @Module({
   imports: [
+    // 🔑 ENV GLOBAL (OBRIGATÓRIO)
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+
     PrismaModule,
-    AuthModule,
-
-    // Domínios da AutoEscola
-    CategoriesModule,
-    PhasesModule,
-    LessonsModule,
-    QuestionsModule,
-    ProgressModule,
-    StatsModule,
-    UsersModule,
-
-    // Módulo do aluno
-    StudentsModule,
-
-    // Módulo administrativo (agora funcionando)
-    AdminModule,
-
-    // Healthcheck — evita container travar como unhealthy
     HealthModule,
+    AuthModule,
+    MeModule,
+    OnboardingModule,
+
+    PersonsModule,
+    PeopleModule,
+
+    TracksModule,
+    AssignmentsModule,
+    AssessmentsModule,
+
+    RiskModule,
+    AuditModule,
+
+    CorrectiveActionsModule,
+    ReportsModule,
+
+    PendingModule,
+    AdminModule,
+    TimelineModule,
+
+    ExceptionsModule,
   ],
 })
 export class AppModule {}

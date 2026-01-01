@@ -5,45 +5,24 @@
   "license": "MIT",
   "scripts": {
     "dev:api": "pnpm --filter ./apps/api dev",
-    "prisma:gen": "pnpm -C apps/api prisma generate",
-    "prisma:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
-    "prisma:push": "prisma db push --schema apps/api/prisma/schema.prisma",
-    "start:full": "./start-full.sh",
-    "stop:full": "./stop-full.sh",
     "dev:web": "pnpm --filter ./apps/web dev",
     "dev:all": "concurrently -n API,WEB -c blue,magenta \"pnpm dev:api\" \"pnpm dev:web\"",
     "build:web": "pnpm --filter ./apps/web build",
     "commit-push": "git add -A && git commit -m \"$npm_config_m\" || echo no-changes && git push origin $(git branch --show-current)",
-    "lint:web": "pnpm --filter ./apps/web lint || echo no-lint",
-    "typecheck:web": "pnpm --filter ./apps/web typecheck || tsc -v >/dev/null || echo no-ts",
-    "lint:api": "pnpm --filter ./apps/api lint || echo no-lint",
     "prisma:studio": "pnpm --filter ./apps/api prisma studio",
-    "prisma:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma --name init",
-    "prisma:seed": "tsx apps/api/prisma/seed.ts",
-    "import:questions": "tsx apps/api/scripts/import-questions.ts",
-    "db:seed": "pnpm prisma:generate && pnpm prisma:push && pnpm import:questions",
     "prestart:full": "bash tools/check-docker.sh",
     "free": "bash ./scripts/free-port.sh 3000",
     "clean-start": "bash ./scripts/free-port.sh 3000 && pnpm run dev:api"
   },
   "packageManager": "pnpm@8.15.4",
   "devDependencies": {
-    "@types/bcryptjs": "^3.0.0",
-    "@types/cookie-parser": "^1.4.10",
+    "@prisma/client": "5.22.0",
     "@types/node": "^20.19.21",
     "concurrently": "^9.2.1",
-    "prisma": "^5.22.0",
+    "prisma": "5.22.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "turbo": "^2.6.1",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@nestjs/mapped-types": "*",
-    "@prisma/client": "^5.22.0",
-    "cookie-parser": "^1.4.7"
-  },
-  "prisma": {
-    "seed": "tsx apps/api/prisma/seed.ts"
   }
 }

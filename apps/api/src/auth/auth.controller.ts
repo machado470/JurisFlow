@@ -1,17 +1,42 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { Body, Controller, Post } from '@nestjs/common'
+import { AuthService } from './auth.service'
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly auth: AuthService) {}
 
   @Post('login')
   async login(
-    @Body('email') email: string,
-    @Body('password') password: string,
+    @Body() body: { email: string; password: string },
   ) {
-    if (!email || !password) throw new UnauthorizedException();
+    return this.auth.login(body.email, body.password)
+  }
 
-    return this.authService.login(email, password);
+  @Post('invite')
+  async invite(
+    @Body()
+    body: {
+      email: string
+      personId: string
+    },
+  ) {
+    return this.auth.inviteCollaborator(
+      body.email,
+      body.personId,
+    )
+  }
+
+  @Post('activate')
+  async activate(
+    @Body()
+    body: {
+      token: string
+      password: string
+    },
+  ) {
+    return this.auth.activateAccount(
+      body.token,
+      body.password,
+    )
   }
 }
