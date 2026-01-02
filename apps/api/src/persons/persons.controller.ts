@@ -2,48 +2,49 @@ import {
   Body,
   Controller,
   Get,
-  Post,
-  Patch,
   Param,
-  UseGuards,
+  Post,
   Req,
+  UseGuards,
 } from '@nestjs/common'
-import { PersonsService } from './persons.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { PersonsService } from './persons.service'
 
 @Controller('persons')
 @UseGuards(JwtAuthGuard)
 export class PersonsController {
   constructor(private readonly persons: PersonsService) {}
 
+  // 🔹 LISTAR PESSOAS ATIVAS
   @Get()
-  list(@Req() req: any) {
-    return this.persons.list(req.user.orgId)
+  async list() {
+    return this.persons.listActive()
   }
 
+  // 🔹 BUSCAR PESSOA COM CONTEXTO
   @Get(':id')
-  get(@Req() req: any, @Param('id') id: string) {
-    return this.persons.getById(id, req.user.orgId)
+  async get(@Param('id') id: string) {
+    return this.persons.findWithContext(id)
   }
 
-  @Post()
-  create(
+  // 🔹 VINCULAR PERSON AO USUÁRIO LOGADO
+  @Post('link')
+  async link(
     @Req() req: any,
     @Body()
-    data: {
-      name: string
-      email: string
-      role: 'ADMIN' | 'COLLABORATOR'
+    body: {
+      personId: string
     },
   ) {
-    return this.persons.create({
-      ...data,
-      orgId: req.user.orgId,
+    return this.persons.linkPersonToUser({
+      userId: req.user.sub,
+      personId: body.personId,
     })
   }
 
-  @Patch(':id/toggle')
-  toggle(@Req() req: any, @Param('id') id: string) {
-    return this.persons.toggleActive(id, req.user.orgId)
+  // 🔹 MÉTRICA BÁSICA
+  @Get('metrics/count-with-user')
+  async countWithUser() {
+    return this.persons.countUsersWithPerson()
   }
 }

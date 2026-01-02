@@ -1,7 +1,7 @@
 import {
   Controller,
   Get,
-  Param,
+  Req,
   UseGuards,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
@@ -14,10 +14,8 @@ export class TimelineController {
     private readonly timeline: TimelineService,
   ) {}
 
-  @Get('person/:personId')
-  async byPerson(
-    @Param('personId') personId: string,
-  ) {
-    return this.timeline.buildForPerson(personId)
+  @Get('org')
+  async listByOrg(@Req() req: any) {
+    return this.timeline.listByOrg(req.user.orgId)
   }
 }

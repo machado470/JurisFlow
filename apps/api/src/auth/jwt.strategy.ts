@@ -9,7 +9,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // 🔑 MESMO SECRET DO LOGIN
       secretOrKey:
         config.get<string>('JWT_SECRET') || 'dev-secret',
     })

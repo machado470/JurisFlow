@@ -1,45 +1,36 @@
 import api from './api'
 
-export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-export type ExecutiveSummary = {
-  totalPeople: number
-  LOW: number
-  MEDIUM: number
-  HIGH: number
-  CRITICAL: number
-}
+export type RiskLevel = 'LOW' | 'HIGH' | 'CRITICAL'
 
 export type PersonAtRisk = {
   id: string
   name: string
   risk: RiskLevel
-  riskScore: number
 }
 
-export type PersonAtRiskSoon = {
-  id: string
-  name: string
-  daysInactive: number
-}
-
-export type RiskTrendPoint = {
-  label: string
-  critical: number
-  high: number
-  medium: number
-}
-
-export async function getExecutiveReport(): Promise<{
-  summary: ExecutiveSummary
+export type ExecutiveReport = {
   peopleAtRisk: PersonAtRisk[]
-  peopleAtRiskSoon: PersonAtRiskSoon[]
-}> {
-  const res = await api.get('/reports/executive')
-  return res.data.data
+  peopleAtRiskSoon: PersonAtRisk[]
+  correctiveOpenCount: number
 }
 
-export async function getRiskTrend(): Promise<RiskTrendPoint[]> {
-  const res = await api.get('/reports/risk-trend')
-  return res.data.data
+type ApiEnvelope<T> = {
+  success: boolean
+  data: T
+}
+
+/**
+ * Suporta 2 formatos:
+ * 1) Envelope: { success: true, data: {...} }
+ * 2) Direto:   { ... }
+ */
+export async function getExecutiveReport(): Promise<ExecutiveReport> {
+  const res = await api.get('/reports/executive')
+  const payload = res.data as any
+
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return (payload as ApiEnvelope<ExecutiveReport>).data
+  }
+
+  return payload as ExecutiveReport
 }

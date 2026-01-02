@@ -14,9 +14,16 @@ export class ReportsController {
     private readonly reports: ReportsService,
   ) {}
 
-  // 📊 Relatório executivo (risco operacional)
   @Get('executive')
-  executive(@Req() req: any) {
-    return this.reports.executive(req.user.orgId)
+  async executive(@Req() req: any) {
+    const data =
+      await this.reports.getExecutiveReport(
+        req.user.orgId,
+      )
+
+    return {
+      success: true,
+      data,
+    }
   }
 }

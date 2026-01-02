@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { randomUUID } from 'crypto'
 
@@ -36,15 +40,17 @@ export class PeopleService {
         name: params.name,
         email: params.email,
         role: params.role,
-        orgId: params.orgId,
+        org: { connect: { id: params.orgId } },
         user: {
           create: {
             email: params.email,
             role: params.role,
             active: false,
             inviteToken,
-            inviteExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-            orgId: params.orgId,
+            inviteExpiresAt: new Date(
+              Date.now() + 1000 * 60 * 60 * 24,
+            ),
+            org: { connect: { id: params.orgId } },
           },
         },
       },
@@ -78,9 +84,11 @@ export class PeopleService {
     return person
   }
 
-  // 🔹 OFFBOARDING
+  // 🔹 OFFBOARDING FORMAL
   async offboardPerson(id: string, reason: string) {
-    const person = await this.prisma.person.findUnique({ where: { id } })
+    const person = await this.prisma.person.findUnique({
+      where: { id },
+    })
 
     if (!person) {
       throw new NotFoundException('Pessoa não encontrada')

@@ -1,31 +1,21 @@
-import type { ReactNode } from 'react'
-
-type Props = {
-  title: string
-  description?: string
-  right?: ReactNode
-}
-
 export default function PageHeader({
   title,
   description,
-  right,
-}: Props) {
+}: {
+  title: string
+  description?: string
+}) {
   return (
-    <header className="flex items-start justify-between gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {title}
-        </h1>
+    <header className="mb-10">
+      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+        {title}
+      </h1>
 
-        {description && (
-          <p className="text-sm text-slate-400 mt-2 max-w-2xl">
-            {description}
-          </p>
-        )}
-      </div>
-
-      {right && <div>{right}</div>}
+      {description && (
+        <p className="mt-2 max-w-2xl text-sm md:text-base text-slate-400">
+          {description}
+        </p>
+      )}
     </header>
   )
 }

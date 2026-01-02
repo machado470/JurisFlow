@@ -1,39 +1,25 @@
-import { useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
+import { ReactNode } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import LandingPage from '../modules/landing/LandingPage'
 
-export default function EntryGate() {
+export default function EntryGate({
+  children,
+}: {
+  children: ReactNode
+}) {
   const { user, systemState, loading } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  if (location.pathname !== '/') return null
-
-  useEffect(() => {
-    if (loading || !user || !systemState) return
-
-    if (user.role === 'ADMIN') {
-      navigate(
-        systemState.requiresOnboarding
-          ? '/admin/onboarding'
-          : '/admin',
-        { replace: true },
-      )
-    } else {
-      navigate('/collaborator', { replace: true })
-    }
-  }, [user, systemState, loading, navigate])
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Carregando…
-      </div>
-    )
+    return <div>Carregando...</div>
   }
 
-  if (!user) return <LandingPage />
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
 
-  return null
+  if (systemState?.requiresOnboarding) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  return <>{children}</>
 }

@@ -1,109 +1,185 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext'
-import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
-import api from '../../services/api'
+import PageHeader from '../../components/base/PageHeader'
+import SectionBase from '../../components/layout/SectionBase'
+import StatusBadge from '../../components/base/StatusBadge'
+import { useExecutiveDashboard } from '../../hooks/useExecutiveDashboard'
 
-type OverviewData = {
-  peopleAtRisk: { id: string; name: string }[]
-  peopleAtRiskSoon: {
-    id: string
-    name: string
-    daysInactive: number
-  }[]
-  correctiveOpenCount: number
+function Kpi({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string
+  value: number
+  tone?: 'neutral' | 'success' | 'warning' | 'danger'
+}) {
+  const toneMap = {
+    neutral: 'text-white',
+    success: 'text-emerald-400',
+    warning: 'text-amber-400',
+    danger: 'text-rose-400',
+  }
+
+  return (
+    <Card>
+      <p className="text-sm text-slate-400">{label}</p>
+      <p className={`mt-2 text-3xl font-semibold ${toneMap[tone]}`}>
+        {value}
+      </p>
+    </Card>
+  )
 }
 
 export default function AdminDashboard() {
-  const { systemState, me } = useAuth()
-  const firstDay = systemState?.requiresOnboarding
-  const assignmentsCount = me?.assignments?.length ?? 0
+  const {
+    loading,
+    data,
+    peopleAtRisk,
+    peopleAtRiskSoon,
+    correctiveOpenCount,
+  } = useExecutiveDashboard()
 
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<OverviewData | null>(null)
+  if (loading) {
+    return (
+      <SectionBase>
+        <PageHeader
+          title="Dashboard Executivo"
+          description="Visão consolidada de risco e ações corretivas."
+        />
+        <p className="mt-6 text-slate-400">
+          Carregando indicadores…
+        </p>
+      </SectionBase>
+    )
+  }
 
-  useEffect(() => {
-    api
-      .get('/admin/overview')
-      .then(res => setData(res.data.data))
-      .finally(() => setLoading(false))
-  }, [])
+  if (!data) {
+    return (
+      <SectionBase>
+        <PageHeader
+          title="Dashboard Executivo"
+          description="Visão consolidada de risco e ações corretivas."
+        />
+        <p className="mt-6 text-slate-400">
+          Não foi possível carregar os dados agora.
+        </p>
+      </SectionBase>
+    )
+  }
+
+  const healthy =
+    peopleAtRisk.length === 0 &&
+    peopleAtRiskSoon.length === 0 &&
+    correctiveOpenCount === 0
 
   return (
-    <div className="space-y-8">
+    <SectionBase>
       <PageHeader
-        title="Painel administrativo"
-        subtitle={
-          firstDay
-            ? 'Configure o essencial para iniciar.'
-            : 'Visão geral do sistema.'
-        }
+        title="Dashboard Executivo"
+        description="Risco humano, conformidade e ações ativas em tempo real."
       />
 
-      {/* CTA EXECUTIVO */}
-      {assignmentsCount > 0 && (
-        <Card className="p-6 border border-blue-500/30 bg-blue-500/5">
-          <div className="flex items-center justify-between gap-6">
-            <div>
-              <div className="text-sm font-medium text-blue-400">
-                Atividade pendente
-              </div>
-              <div className="mt-1 text-slate-300">
-                Você tem {assignmentsCount}{' '}
-                {assignmentsCount === 1
-                  ? 'atividade'
-                  : 'atividades'} para executar agora.
-              </div>
-            </div>
-
-            <Link
-              to="/execucao"
-              className="
-                rounded-lg bg-blue-600 px-5 py-3
-                text-sm font-medium text-white
-                hover:bg-blue-500 transition
-              "
-            >
-              Executar agora
-            </Link>
+      {/* ESTADO GERAL */}
+      <div className="mt-6">
+        {healthy ? (
+          <div className="flex items-center gap-2 text-emerald-400">
+            <span>●</span>
+            <span className="text-sm">
+              Organização em conformidade. Nenhum risco ativo.
+            </span>
           </div>
-        </Card>
-      )}
-
-      {/* MÉTRICAS */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="p-6">
-          <div className="text-xs uppercase opacity-60">
-            Pessoas em risco
+        ) : (
+          <div className="flex items-center gap-2 text-amber-400">
+            <span>●</span>
+            <span className="text-sm">
+              Atenção necessária. Existem riscos ou ações pendentes.
+            </span>
           </div>
-          <div className="mt-2 text-2xl font-semibold">
-            {loading ? '…' : data?.peopleAtRisk.length ?? 0}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="text-xs uppercase opacity-60">
-            Risco iminente
-          </div>
-          <div className="mt-2 text-2xl font-semibold">
-            {loading
-              ? '…'
-              : data?.peopleAtRiskSoon.length ?? 0}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="text-xs uppercase opacity-60">
-            Ações corretivas abertas
-          </div>
-          <div className="mt-2 text-2xl font-semibold">
-            {loading
-              ? '…'
-              : data?.correctiveOpenCount ?? 0}
-          </div>
-        </Card>
+        )}
       </div>
-    </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <Kpi
+          label="Pessoas em risco"
+          value={peopleAtRisk.length}
+          tone={
+            peopleAtRisk.length === 0 ? 'success' : 'danger'
+          }
+        />
+        <Kpi
+          label="Risco em breve"
+          value={peopleAtRiskSoon.length}
+          tone={
+            peopleAtRiskSoon.length === 0
+              ? 'success'
+              : 'warning'
+          }
+        />
+        <Kpi
+          label="Ações corretivas abertas"
+          value={correctiveOpenCount}
+          tone={
+            correctiveOpenCount === 0
+              ? 'success'
+              : 'warning'
+          }
+        />
+      </div>
+
+      {/* PESSOAS EM RISCO */}
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold mb-4">
+          Pessoas em risco
+        </h2>
+
+        {peopleAtRisk.length === 0 ? (
+          <p className="text-slate-400">
+            Nenhuma pessoa em risco no momento.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {peopleAtRisk.map(p => (
+              <Card key={p.id}>
+                <div className="flex items-center justify-between">
+                  <span>{p.name}</span>
+                  <StatusBadge
+                    label={p.risk}
+                    tone={p.risk.toLowerCase()}
+                  />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* RISCO EM BREVE */}
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold mb-4">
+          Risco em breve
+        </h2>
+
+        {peopleAtRiskSoon.length === 0 ? (
+          <p className="text-slate-400">
+            Nenhum risco iminente identificado.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {peopleAtRiskSoon.map(p => (
+              <Card key={p.id}>
+                <div className="flex items-center justify-between">
+                  <span>{p.name}</span>
+                  <StatusBadge
+                    label={p.risk}
+                    tone={p.risk.toLowerCase()}
+                  />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+    </SectionBase>
   )
 }

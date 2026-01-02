@@ -11,26 +11,18 @@ export default function Card({
     <div
       className={`
         relative
-        h-full
         rounded-2xl
         bg-white/[0.06]
         backdrop-blur-xl
         border border-white/10
-        shadow-[0_25px_60px_rgba(0,0,0,0.35)]
-        transition-all duration-300
+        shadow-[0_8px_30px_rgba(0,0,0,0.35)]
+        p-6
+        transition
+        hover:bg-white/[0.08]
         ${className}
       `}
     >
-      {/* Linha superior de destaque */}
-      <div className="
-        pointer-events-none
-        absolute inset-x-0 top-0 h-px
-        bg-gradient-to-r from-transparent via-white/30 to-transparent
-      " />
-
-      <div className="relative z-10 p-12">
-        {children}
-      </div>
+      {children}
     </div>
   )
 }

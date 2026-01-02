@@ -1,311 +1,150 @@
-📌 STATUS OFICIAL — JURISFLOW
+# STATUS — JURISFLOW / AUTOESCOLA-SIM
+📅 Congelamento: 2026-01-01  
+🚦 Estado geral: VERDE  
+🎯 Marco: CICLO OPERACIONAL COMPLETO
 
-📅 Atualização: hoje
-🎯 Fase do produto: Produto funcional com landing profissional + auth premium + núcleo operacional fechado
-🚦 Estado geral: VERDE (estrutura sólida, ciclos críticos fechados)
+---
 
-🧠 VISÃO GERAL
+## 🧠 VISÃO DO SISTEMA
 
-O JurisFlow é um sistema operacional de governança de treinamento, risco humano e auditoria, projetado para ambientes jurídicos e corporativos reais.
+Plataforma de **governança de treinamento, execução humana e risco**, com:
+- causalidade explícita
+- auditoria nativa
+- estado único confiável
+- separação clara entre decisão e execução
 
-Não é MVP descartável.
-Não é sistema gamificado.
-Não é dashboard decorativo.
+Não é MVP descartável.  
+Não é dashboard decorativo.  
+É um **sistema operacional humano**.
 
-Princípios inegociáveis:
+---
 
-decisões explicáveis
+## 🔑 ARQUITETURA (DECISÕES CRÍTICAS)
 
-rastreabilidade jurídica
+### Fonte da Verdade
+- `/me` é a **única fonte de estado**
+- Front não inventa dados
+- Guards respeitam estado real
 
-governança humana real
+### Modelagem
+- `User` ≠ `Person`
+- Onboarding é **organizacional**, não por usuário
+- Assignments são a unidade mínima de execução
 
-confiança operacional
+### Governança
+- Ação → Assessment → Risk → Snapshot → Timeline
+- Tudo é explicável, auditável e rastreável
 
-O backend é autoritativo.
-O frontend nunca decide regra.
+---
 
-🧱 ARQUITETURA GERAL
-Backend
+## 🔐 AUTENTICAÇÃO & ONBOARDING
 
-NestJS
+- Login JWT funcional
+- Persistência em `localStorage`
+- Guards por papel (`ADMIN`, `COLLABORATOR`)
+- Onboarding **obrigatório e determinístico**
+- Nenhum bypass por URL
 
-PostgreSQL
+Arquivos-chave:
+- `AuthContext`
+- `RequireAuth`
+- `RequireOnboarding`
+- `Onboarding.tsx`
 
-Prisma
+---
 
-Dockerizado
+## 👑 FLUXO ADMIN (FECHADO)
 
-Estado autoritativo no backend
+- Acesso protegido
+- Dashboard reage ao estado real
+- Visualiza:
+  - urgência operacional
+  - pendências
+  - **timeline de eventos reais**
 
-Seeds e migrações estáveis
+Admin não “confia”: **vê o que aconteceu**.
 
-Frontend
+Arquivos-chave:
+- `AdminDashboard.tsx`
+- `timeline.controller.ts`
 
-React + Vite
+---
 
-TailwindCSS
+## 👤 FLUXO COLABORADOR (FECHADO)
 
-Separação clara entre:
+- Acesso protegido
+- Visualiza assignments reais
+- Executa atividades
+- Avança progresso
+- **Conclui com score**
+- Estado global é recalculado automaticamente
 
-Landing pública (marketing/conversão)
+Arquivos-chave:
+- `CollaboratorDashboard.tsx`
+- `AssignmentExecution.tsx`
 
-Sistema (app governado)
+---
 
-✅ LANDING PAGE — FECHADA (V1)
+## 🔁 EXECUÇÃO & RISCO (FECHADO)
 
-Local:
+Backend possui:
+- start
+- progress
+- complete
+- assessment
+- cálculo de risco
+- snapshot
+- evento de timeline
 
-apps/web/src/modules/landing/
+Frontend:
+- chama endpoints corretos
+- revalida `/me`
+- redireciona conscientemente
 
-Estrutura final
+Nada fica implícito.
 
-Hero
+---
 
-Features
+## 🟢 ESTADO ATUAL
 
-HowItWorks (ciclo operacional real)
+- Auth: OK
+- Onboarding: OK
+- Admin flow: OK
+- Collaborator flow: OK
+- Execution: OK
+- Risk & Audit: OK
+- Timeline: OK
+- Visibilidade executiva mínima: OK
 
-Modules (o que o sistema controla)
+👉 Sistema **operacional**.
 
-Security (LGPD, auditoria, estado autoritativo)
+---
 
-ExecutivePreview (prova visual)
+## 🚫 O QUE NÃO FAZER AGORA
 
-CTA
+- Não mexer em schema
+- Não criar feature nova
+- Não otimizar UI
+- Não refatorar sem propósito
 
-Footer
+Base está sólida.
 
-Estado
+---
 
-100% isolada do backend
+## 🔜 PRÓXIMOS CAMINHOS POSSÍVEIS
 
-Sem auth
+1. **ExecutiveDashboard agregado por organização**
+2. **Relatórios formais (risk, assessments, timeline)**
+3. **Empacotamento para demo / piloto**
+4. **Go-to-market**
 
-Sem promessas fora do sistema
+Todos são evolução, não correção.
 
-Visual premium (glass + azul executivo)
+---
 
-Narrativa completa e honesta
+## 🧊 CONCLUSÃO
 
-👉 Landing congelada como baseline v1.
+Este projeto atingiu um marco raro:
+**ciclo humano completo, observável e auditável**.
 
-✅ AUTH — FACHADA FECHADA (V1)
-
-Local:
-
-apps/web/src/modules/auth/
-
-Componentes
-
-AuthLayout.tsx — layout executivo reutilizável
-
-Login.tsx — porta premium alinhada à landing
-
-ActivateAccount.tsx — ativação com identidade consistente
-
-Logout.tsx — lógico, invisível, correto
-
-Estado
-
-Nenhuma lógica de auth alterada
-
-Contrato com backend intacto
-
-EntryGate respeitado
-
-Zero CSS órfão
-
-Visual consistente do primeiro clique ao sistema
-
-👉 Auth congelado como baseline v1.
-
-✅ BACKEND — ESTADO REAL (FECHADO)
-🔐 Autenticação & Organização
-
-JWT funcional
-
-Roles (ADMIN / COLLABORATOR)
-
-Isolamento por organização (orgId)
-
-/me como fonte única de estado
-
-Onboarding admin idempotente
-
-👤 Pessoas
-
-Criação, listagem e detalhe
-
-Ativação/desativação sem perda histórica
-
-Vínculo User ↔ Person consistente
-
-RiskScore calculado por motor central
-
-Estados explícitos (ativo, inativo, exceção)
-
-🎓 Trilhas, Assignments & Progresso
-
-Trilhas reais
-
-Assignments automáticos
-
-Progresso auditável (0–100)
-
-Início, avanço e conclusão rastreados
-
-📝 Avaliações & Feedback (CICLO FECHADO)
-
-Avaliação por assignment
-
-Risco educacional calculado
-
-Snapshot de risco registrado
-
-Feedback pedagógico claro ao colaborador
-
-UI dedicada de feedback
-
-⚠️ Motor de Risco (CORE)
-
-RiskService central
-
-TemporalRiskService ativo
-
-Detecção automática de:
-
-atraso
-
-inércia
-
-abandono
-
-Histórico com motivo explícito
-
-🧑‍⚖️ Exceções Humanas
-
-PersonException implementado
-
-Tipos: VACATION, LEAVE, PAUSE
-
-Período com início/fim
-
-Suspensão real de penalizações
-
-Auditoria completa
-
-UI administrativa funcional
-
-📝 Auditoria Enterprise
-
-Timeline unificada
-
-Fontes: EVENT, AUDIT, RISK
-
-Severidade definida no backend
-
-Narrativa defensável
-
-Usada em PersonDetail e área admin
-
-🖥️ Frontend (ADMIN)
-
-Dashboard funcional
-
-Gestão de pessoas
-
-Detalhe individual completo
-
-Exceções governáveis
-
-Timeline auditável
-
-UI limpa, baseada em cards
-
-👤 Frontend (COLLABORATOR)
-
-Dashboard do colaborador
-
-Execução de assignments
-
-Envio de avaliação
-
-Feedback pedagógico
-
-Retorno ao fluxo normal
-
-🟡 O QUE ESTÁ PARCIAL (NÃO QUEBRADO)
-Ciclo de Vida do Usuário
-
-Falta formalizar:
-
-primeiro dia orientado
-
-estado inicial contextual
-
-desligamento auditável
-
-Ações Corretivas Automáticas
-
-Manual funciona
-
-Falta automação por risco CRITICAL
-
-Falta reavaliação automática
-
-Visão Executiva
-
-Dados existem
-
-Falta camada de decisão:
-
-tendência
-
-custo de não agir
-
-comparação temporal
-
-❌ O QUE NÃO EXISTE (POR DECISÃO)
-
-Gamificação
-
-Rankings
-
-Score sem explicação
-
-Emojis decorativos
-
-Front decidindo regra de negócio
-
-Essas ausências são intencionais.
-
-🎯 PRÓXIMOS PASSOS RECOMENDADOS
-
-Automação de ações corretivas
-
-Estado formal de entrada/saída do usuário
-
-Governança de trilhas (prioridade/dependência)
-
-Dashboard executivo orientado à decisão
-
-Relatórios de tendência e risco acumulado
-
-🏁 VEREDITO FINAL
-
-O JurisFlow hoje é um produto real, com:
-
-landing profissional
-
-auth premium
-
-núcleo operacional fechado
-
-decisões técnicas maduras
-
-Nada é mock.
-Nada depende de achismo.
-Nada quebra se escalar.
-
-A base está pronta para piloto pago, demo executiva e evolução controlada.
+A partir daqui, toda decisão é estratégica.

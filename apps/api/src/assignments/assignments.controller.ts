@@ -1,50 +1,39 @@
 import {
-  Body,
   Controller,
   Get,
   Param,
-  Patch,
   Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { AssignmentsService } from './assignments.service'
 
 @Controller('assignments')
+@UseGuards(JwtAuthGuard)
 export class AssignmentsController {
   constructor(
-    private readonly assignments: AssignmentsService,
+    private readonly service: AssignmentsService,
   ) {}
 
-  @Get()
-  list() {
-    return this.assignments.list()
-  }
-
-  // ✅ NOVO — atribuir trilha à pessoa
-  @Post()
-  async assign(
-    @Body()
-    body: {
-      personId: string
-      trackId: string
-    },
+  @Get('person/:personId')
+  async listByPerson(
+    @Param('personId') personId: string,
   ) {
-    return this.assignments.createIfNotExists(body)
+    return this.service.listOpenByPerson(personId)
   }
 
   @Post(':id/start')
-  async start(@Param('id') id: string) {
-    return this.assignments.start(id)
+  async start(
+    @Param('id') id: string,
+  ) {
+    return this.service.startAssignment(id)
   }
 
-  @Patch(':id/progress')
-  async updateProgress(
+  @Post(':id/complete')
+  async complete(
     @Param('id') id: string,
-    @Body()
-    body: { progress: number },
   ) {
-    return this.assignments.updateProgress(
-      id,
-      body.progress,
-    )
+    return this.service.completeAssignment(id)
   }
 }

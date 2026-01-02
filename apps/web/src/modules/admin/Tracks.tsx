@@ -1,103 +1,47 @@
-import { useEffect, useState } from 'react'
-import PageHeader from '../../components/base/PageHeader'
+import { useNavigate } from 'react-router-dom'
 import Card from '../../components/base/Card'
-import {
-  getTracks,
-  createTrack,
-  type Track,
-} from '../../services/tracks'
+import PageHeader from '../../components/base/PageHeader'
+import { useTracks } from '../../hooks/useTracks'
 
 export default function Tracks() {
-  const [tracks, setTracks] = useState<Track[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const { tracks, loading } = useTracks()
 
-  const [title, setTitle] = useState('')
-  const [creating, setCreating] = useState(false)
-
-  async function load() {
-    setLoading(true)
-    try {
-      const data = await getTracks()
-      setTracks(data)
-    } catch {
-      setError('Erro ao carregar trilhas')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!title.trim()) return
-
-    try {
-      setCreating(true)
-      await createTrack({ title })
-      setTitle('')
-      await load()
-    } catch {
-      alert('Erro ao criar trilha')
-    } finally {
-      setCreating(false)
-    }
+  if (loading) {
+    return <div className="text-sm opacity-60">Carregando trilhas…</div>
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <PageHeader
         title="Trilhas"
-        description="Gerencie trilhas de treinamento"
+        description="Estrutura de governança da organização"
       />
 
-      <form onSubmit={handleCreate} className="mb-6 flex gap-2">
-        <input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Nome da trilha"
-          className="flex-1 rounded bg-slate-800 px-3 py-2 text-white"
-        />
-        <button
-          disabled={creating}
-          className="rounded bg-blue-600 px-4 py-2 text-white"
-        >
-          {creating ? 'Criando…' : 'Criar'}
-        </button>
-      </form>
-
-      {loading && (
-        <div className="text-slate-400">
-          Carregando trilhas…
+      {tracks.length === 0 ? (
+        <Card>
+          <div className="text-sm text-slate-400">
+            Nenhuma trilha criada ainda.
+          </div>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {tracks.map(track => (
+            <Card
+              key={track.id}
+              className="p-6 cursor-pointer hover:bg-slate-900"
+              onClick={() =>
+                navigate(`/admin/tracks/${track.id}`)
+              }
+            >
+              <div className="font-medium">{track.title}</div>
+              <div className="text-sm text-slate-400 mt-1">
+                {track.description}
+              </div>
+            </Card>
+          ))}
         </div>
       )}
-
-      {error && (
-        <div className="text-red-400">{error}</div>
-      )}
-
-      {!loading && tracks.length === 0 && (
-        <div className="text-slate-400">
-          Nenhuma trilha cadastrada.
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {tracks.map(track => (
-          <Card key={track.id} className="p-6">
-            <h3 className="text-white font-medium">
-              {track.title}
-            </h3>
-
-            <div className="mt-2 text-sm text-slate-400">
-              Pessoas atribuídas: {track.assignmentsCount}
-            </div>
-          </Card>
-        ))}
-      </div>
-    </>
+    </div>
   )
 }

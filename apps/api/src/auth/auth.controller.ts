@@ -17,13 +17,9 @@ export class AuthController {
     @Body()
     body: {
       email: string
-      personId: string
     },
   ) {
-    return this.auth.inviteCollaborator(
-      body.email,
-      body.personId,
-    )
+    return this.auth.inviteCollaborator(body.email)
   }
 
   @Post('activate')
