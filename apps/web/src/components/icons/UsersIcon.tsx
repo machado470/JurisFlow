@@ -1,13 +1,18 @@
-export default function UsersIcon() {
+export default function UsersIcon({
+  className = 'w-4 h-4',
+}: {
+  className?: string
+}) {
   return (
     <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="w-full h-full"
     >
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />

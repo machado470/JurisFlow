@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  Req,
-  UseGuards,
-} from '@nestjs/common'
+import { Controller, Get, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { TimelineService } from './timeline.service'
 
@@ -14,8 +9,8 @@ export class TimelineController {
     private readonly timeline: TimelineService,
   ) {}
 
-  @Get('org')
-  async listByOrg(@Req() req: any) {
-    return this.timeline.listByOrg(req.user.orgId)
+  @Get()
+  async listGlobal() {
+    return this.timeline.listGlobal()
   }
 }

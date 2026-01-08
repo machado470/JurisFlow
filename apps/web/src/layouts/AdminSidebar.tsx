@@ -4,36 +4,40 @@ import { useTheme } from '../theme/useTheme'
 import { getExecutiveReport } from '../services/reports'
 import StatusBadge from '../components/base/StatusBadge'
 
-type RiskSummary = {
+type PeopleStats = {
+  OK: number
+  WARNING: number
   CRITICAL: number
-  HIGH: number
-  MEDIUM: number
 }
 
 const links = [
   { to: '/admin', label: 'Dashboard' },
-  { to: '/admin/people', label: 'Pessoas' },
-  { to: '/admin/tracks', label: 'Trilhas' },
-  { to: '/admin/reports', label: 'Relatórios' },
+  { to: '/admin/pessoas', label: 'Pessoas' },
+  { to: '/admin/trilhas', label: 'Trilhas' },
+  { to: '/admin/relatorios', label: 'Relatórios' },
 ]
 
 export default function AdminSidebar() {
   const { styles } = useTheme()
-  const [risk, setRisk] = useState<RiskSummary | null>(null)
+  const [stats, setStats] = useState<PeopleStats | null>(
+    null,
+  )
 
   useEffect(() => {
     getExecutiveReport()
-      .then(report => setRisk(report.summary))
+      .then(report => {
+        setStats(report.peopleStats)
+      })
       .catch(() => {})
   }, [])
 
   function badgeFor(label: string) {
-    if (!risk) return null
+    if (!stats) return null
 
-    if (label === 'Relatórios' && risk.CRITICAL > 0) {
+    if (label === 'Dashboard' && stats.CRITICAL > 0) {
       return (
         <StatusBadge
-          label={`${risk.CRITICAL}`}
+          label={`${stats.CRITICAL}`}
           tone="critical"
         />
       )
@@ -41,11 +45,11 @@ export default function AdminSidebar() {
 
     if (
       label === 'Pessoas' &&
-      (risk.HIGH > 0 || risk.MEDIUM > 0)
+      (stats.WARNING > 0 || stats.CRITICAL > 0)
     ) {
       return (
         <StatusBadge
-          label={`${risk.HIGH + risk.MEDIUM}`}
+          label={`${stats.WARNING + stats.CRITICAL}`}
           tone="warning"
         />
       )
@@ -82,15 +86,15 @@ export default function AdminSidebar() {
                 end
                 className={({ isActive }) =>
                   `
-                    flex items-center justify-between
-                    rounded-lg px-4 py-2 text-sm
-                    transition
-                    ${
-                      isActive
-                        ? 'bg-blue-600/15 text-blue-400'
-                        : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10'
-                    }
-                  `
+                  flex items-center justify-between
+                  rounded-lg px-4 py-2 text-sm
+                  transition
+                  ${
+                    isActive
+                      ? 'bg-blue-600/15 text-blue-400'
+                      : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10'
+                  }
+                `
                 }
               >
                 <span>{link.label}</span>

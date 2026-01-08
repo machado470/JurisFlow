@@ -1,78 +1,38 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { randomUUID } from 'crypto'
+import { AuditService } from '../audit/audit.service'
 
 @Injectable()
 export class PeopleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  // 🔹 LISTAR POR ORGANIZAÇÃO
-  async listByOrg(orgId: string) {
+  async findAll() {
     return this.prisma.person.findMany({
-      where: { orgId },
-      orderBy: { createdAt: 'desc' },
-    })
-  }
-
-  // 🔹 CRIAR PESSOA + USUÁRIO (CONVITE)
-  async create(params: {
-    name: string
-    email: string
-    role: 'ADMIN' | 'COLLABORATOR'
-    orgId: string
-  }) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: params.email },
-    })
-
-    if (existingUser) {
-      throw new BadRequestException('Email já utilizado')
-    }
-
-    const inviteToken = randomUUID()
-
-    const person = await this.prisma.person.create({
-      data: {
-        name: params.name,
-        email: params.email,
-        role: params.role,
-        org: { connect: { id: params.orgId } },
-        user: {
-          create: {
-            email: params.email,
-            role: params.role,
-            active: false,
-            inviteToken,
-            inviteExpiresAt: new Date(
-              Date.now() + 1000 * 60 * 60 * 24,
-            ),
-            org: { connect: { id: params.orgId } },
-          },
-        },
-      },
       include: {
         user: true,
       },
+      orderBy: {
+        name: 'asc',
+      },
     })
-
-    return {
-      personId: person.id,
-      inviteLink: `/activate?token=${inviteToken}`,
-    }
   }
 
-  // 🔹 BUSCAR POR ID
   async findById(id: string) {
     const person = await this.prisma.person.findUnique({
       where: { id },
       include: {
-        events: { orderBy: { createdAt: 'desc' } },
-        correctiveActions: {
-          orderBy: { createdAt: 'desc' },
+        user: true,
+        assignments: {
+          include: {
+            track: true,
+          },
         },
       },
     })
@@ -84,37 +44,101 @@ export class PeopleService {
     return person
   }
 
-  // 🔹 OFFBOARDING FORMAL
-  async offboardPerson(id: string, reason: string) {
-    const person = await this.prisma.person.findUnique({
-      where: { id },
-    })
+  /**
+   * 🔁 FÉRIAS / AFASTAMENTO TEMPORÁRIO
+   * Não remove histórico.
+   * Não apaga usuário.
+   * Apenas congela o regime.
+   */
+  async deactivate(id: string, reason?: string) {
+    const person = await this.findById(id)
 
-    if (!person) {
-      throw new NotFoundException('Pessoa não encontrada')
+    if (!person.active) {
+      throw new BadRequestException(
+        'Pessoa já está inativa',
+      )
     }
 
-    if (person.offboardedAt) return person
+    await this.prisma.person.update({
+      where: { id },
+      data: {
+        active: false,
+      },
+    })
 
-    const updated = await this.prisma.person.update({
+    await this.audit.log({
+      action: 'PERSON_DEACTIVATED',
+      personId: id,
+      context:
+        reason ??
+        'Pessoa marcada como inativa (férias/afastamento)',
+    })
+
+    return { success: true }
+  }
+
+  /**
+   * 🔁 RETORNO DE FÉRIAS / AFASTAMENTO
+   */
+  async activate(id: string) {
+    const person = await this.findById(id)
+
+    if (person.active) {
+      throw new BadRequestException(
+        'Pessoa já está ativa',
+      )
+    }
+
+    if (person.offboardedAt) {
+      throw new BadRequestException(
+        'Pessoa desligada não pode ser reativada',
+      )
+    }
+
+    await this.prisma.person.update({
+      where: { id },
+      data: {
+        active: true,
+      },
+    })
+
+    await this.audit.log({
+      action: 'PERSON_REACTIVATED',
+      personId: id,
+      context: 'Pessoa reativada após afastamento',
+    })
+
+    return { success: true }
+  }
+
+  /**
+   * ⛔ DESLIGAMENTO DEFINITIVO
+   */
+  async offboard(id: string, reason?: string) {
+    const person = await this.findById(id)
+
+    if (person.offboardedAt) {
+      throw new BadRequestException(
+        'Pessoa já está desligada',
+      )
+    }
+
+    await this.prisma.person.update({
       where: { id },
       data: {
         active: false,
         offboardedAt: new Date(),
-        offboardReason: reason,
       },
     })
 
-    await this.prisma.event.create({
-      data: {
-        type: 'PERSON_OFFBOARDED',
-        severity: 'INFO',
-        description: 'Pessoa desligada formalmente.',
-        personId: id,
-        metadata: { reason },
-      },
+    await this.audit.log({
+      action: 'PERSON_OFFBOARDED',
+      personId: id,
+      context:
+        reason ??
+        'Pessoa desligada do sistema',
     })
 
-    return updated
+    return { success: true }
   }
 }

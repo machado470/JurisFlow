@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { TimelineService } from '../timeline/timeline.service'
-import { RiskLevel } from '@prisma/client'
 
 @Injectable()
 export class AssignmentsService {
@@ -16,48 +19,98 @@ export class AssignmentsService {
         personId,
         progress: { lt: 100 },
       },
+      include: {
+        track: true,
+      },
+      orderBy: { createdAt: 'desc' },
     })
   }
 
-  async startAssignment(id: string) {
-    const assignment = await this.prisma.assignment.findUnique({
-      where: { id },
-    })
+  async startAssignment(assignmentId: string) {
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: { id: assignmentId },
+      })
 
-    if (!assignment) return null
-    if (assignment.progress > 0) return assignment
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment não encontrado',
+      )
+    }
 
-    const updated = await this.prisma.assignment.update({
-      where: { id },
-      data: { progress: 1 },
-    })
+    if (assignment.progress > 0) {
+      return assignment
+    }
+
+    const updated =
+      await this.prisma.assignment.update({
+        where: { id: assignmentId },
+        data: { progress: 1 },
+      })
 
     await this.timeline.log({
-      type: 'ASSIGNMENT_STARTED',
+      action: 'ASSIGNMENT_STARTED',
       personId: assignment.personId,
     })
 
     return updated
   }
 
-  async completeAssignment(id: string) {
-    const assignment = await this.prisma.assignment.findUnique({
-      where: { id },
-    })
+  async updateProgress(
+    assignmentId: string,
+    progress: number,
+  ) {
+    if (progress < 0 || progress > 100) {
+      throw new BadRequestException(
+        'Progresso inválido',
+      )
+    }
 
-    if (!assignment) return null
-    if (assignment.progress === 100) return assignment
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: { id: assignmentId },
+      })
 
-    const updated = await this.prisma.assignment.update({
-      where: { id },
-      data: {
-        progress: 100,
-        risk: RiskLevel.LOW,
-      },
-    })
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment não encontrado',
+      )
+    }
+
+    const updated =
+      await this.prisma.assignment.update({
+        where: { id: assignmentId },
+        data: { progress },
+      })
 
     await this.timeline.log({
-      type: 'ASSIGNMENT_COMPLETED',
+      action: 'ASSIGNMENT_PROGRESS_UPDATED',
+      personId: assignment.personId,
+    })
+
+    return updated
+  }
+
+  async completeAssignment(assignmentId: string) {
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: { id: assignmentId },
+      })
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment não encontrado',
+      )
+    }
+
+    const updated =
+      await this.prisma.assignment.update({
+        where: { id: assignmentId },
+        data: { progress: 100 },
+      })
+
+    await this.timeline.log({
+      action: 'ASSIGNMENT_COMPLETED',
       personId: assignment.personId,
     })
 

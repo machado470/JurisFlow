@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getExecutiveReport } from '../services/reports'
-import type { ExecutiveReport } from '../services/reports'
+import {
+  getExecutiveReport,
+  type ExecutiveReport,
+} from '../services/reports'
 
 export function useExecutiveDashboard() {
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<ExecutiveReport | null>(null)
+  const [data, setData] = useState<ExecutiveReport | null>(
+    null,
+  )
 
   async function load() {
     setLoading(true)
@@ -26,9 +30,21 @@ export function useExecutiveDashboard() {
     () => ({
       loading,
       data,
-      peopleAtRisk: data?.peopleAtRisk ?? [],
-      peopleAtRiskSoon: data?.peopleAtRiskSoon ?? [],
-      correctiveOpenCount: data?.correctiveOpenCount ?? 0,
+
+      peopleStats: data?.peopleStats ?? {
+        total: 0,
+        ok: 0,
+        warning: 0,
+        critical: 0,
+      },
+
+      correctiveOpenCount:
+        data?.correctiveOpenCount ?? 0,
+
+      tracks: data?.tracks ?? [],
+      people: data?.people ?? [],
+      timeline: data?.timeline ?? [],
+
       reload: load,
     }),
     [loading, data],

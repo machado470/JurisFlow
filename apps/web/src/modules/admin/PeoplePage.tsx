@@ -1,0 +1,85 @@
+import { useNavigate } from 'react-router-dom'
+
+import Card from '../../components/base/Card'
+import PageHeader from '../../components/base/PageHeader'
+import SectionBase from '../../components/layout/SectionBase'
+import StatusBadge from '../../components/base/StatusBadge'
+
+import { useExecutiveDashboard } from '../../hooks/useExecutiveDashboard'
+
+type PersonStatus = 'OK' | 'WARNING' | 'CRITICAL'
+
+function statusLabel(s: PersonStatus) {
+  if (s === 'CRITICAL') return 'Crítico'
+  if (s === 'WARNING') return 'Atenção'
+  return 'OK'
+}
+
+function statusTone(s: PersonStatus) {
+  if (s === 'CRITICAL') return 'critical'
+  if (s === 'WARNING') return 'warning'
+  return 'success'
+}
+
+export default function PeoplePage() {
+  const navigate = useNavigate()
+  const { loading, people } = useExecutiveDashboard()
+
+  if (loading) {
+    return (
+      <SectionBase>
+        <PageHeader
+          title="Pessoas"
+          description="Fila institucional de decisão."
+        />
+        <p className="mt-6 text-slate-400">
+          Carregando pessoas…
+        </p>
+      </SectionBase>
+    )
+  }
+
+  // 🔥 PRIORIDADE INSTITUCIONAL
+  const ordered = [...people].sort((a, b) => {
+    const weight = (s: PersonStatus) =>
+      s === 'CRITICAL' ? 3 : s === 'WARNING' ? 2 : 1
+
+    return weight(b.status) - weight(a.status)
+  })
+
+  return (
+    <SectionBase>
+      <PageHeader
+        title="Pessoas"
+        description="Fila institucional de decisão."
+      />
+
+      <div className="space-y-3 mt-8">
+        {ordered.map(p => (
+          <Card
+            key={p.id}
+            className="cursor-pointer hover:bg-white/10 transition"
+            onClick={() =>
+              navigate(`/admin/pessoas/${p.id}`)
+            }
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{p.name}</p>
+                <p className="text-sm text-slate-400">
+                  {p.department}
+                </p>
+              </div>
+
+              <StatusBadge
+                label={statusLabel(p.status)}
+                tone={statusTone(p.status)}
+              />
+            </div>
+          </Card>
+        ))}
+      </div>
+    </SectionBase>
+  )
+}
+

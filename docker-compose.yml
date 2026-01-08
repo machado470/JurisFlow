@@ -1,19 +1,4 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: autoescola_api
-    ports:
-      - "3001:3000"
-    env_file:
-      - .env.docker
-    environment:
-      - PORT=3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   postgres:
     image: postgres:15
     container_name: autoescola_postgres
@@ -23,8 +8,27 @@ services:
       POSTGRES_DB: autoescola
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autoescola_api
+    env_file:
+      - .env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

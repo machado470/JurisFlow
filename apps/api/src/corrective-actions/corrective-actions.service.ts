@@ -1,16 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { AuditService } from '../audit/audit.service'
 import { RiskService } from '../risk/risk.service'
-import { RiskSnapshotService } from '../risk/risk-snapshot.service'
+import {
+  OperationalStateService,
+  OperationalState,
+} from '../people/operational-state.service'
 
 @Injectable()
 export class CorrectiveActionsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
     private readonly risk: RiskService,
-    private readonly snapshots: RiskSnapshotService,
+    private readonly operationalState: OperationalStateService,
   ) {}
 
+  // ----------------------------
+  // 📋 LISTAGEM
+  // ----------------------------
   async listByPerson(personId: string) {
     return this.prisma.correctiveAction.findMany({
       where: { personId },
@@ -18,168 +31,120 @@ export class CorrectiveActionsService {
     })
   }
 
-  async create(params: { personId: string; reason: string }) {
-    const action = await this.prisma.correctiveAction.create({
-      data: {
-        personId: params.personId,
-        reason: params.reason,
-        status: 'OPEN',
-      },
-    })
-
-    await this.prisma.event.create({
-      data: {
-        type: 'CORRECTIVE_ACTION_CREATED',
-        severity: 'WARNING',
-        description: 'Ação corretiva criada.',
-        personId: params.personId,
-      },
-    })
-
-    await this.snapshots.record({
-      personId: params.personId,
-      score: 20,
-      reason: 'Ação corretiva criada',
-    })
-
-    await this.risk.recalculatePersonRisk(params.personId)
-
-    return action
-  }
-
-  async resolve(id: string) {
-    const action = await this.prisma.correctiveAction.findUnique({
-      where: { id },
-    })
+  // ----------------------------
+  // ✅ RESOLUÇÃO MANUAL (COM ESTADO OPERACIONAL)
+  // ----------------------------
+  async resolve(actionId: string) {
+    const action =
+      await this.prisma.correctiveAction.findUnique({
+        where: { id: actionId },
+      })
 
     if (!action) {
-      throw new NotFoundException('Ação corretiva não encontrada')
+      throw new NotFoundException(
+        'Ação corretiva não encontrada',
+      )
     }
 
-    // ✅ Resolver não encerra o ciclo: encerra a "execução", mas exige reavaliação
-    const resolved = await this.prisma.correctiveAction.update({
-      where: { id },
+    if (action.status !== 'OPEN') {
+      throw new BadRequestException(
+        'Ação não está aberta',
+      )
+    }
+
+    const state: OperationalState =
+      await this.operationalState.getState(
+        action.personId,
+      )
+
+    if (state !== 'NORMAL') {
+      throw new ForbiddenException(
+        `Ação bloqueada. Estado operacional atual: ${state}`,
+      )
+    }
+
+    await this.prisma.correctiveAction.update({
+      where: { id: actionId },
       data: {
         status: 'AWAITING_REASSESSMENT',
         resolvedAt: new Date(),
       },
     })
 
-    await this.prisma.event.create({
-      data: {
-        type: 'CORRECTIVE_ACTION_RESOLVED',
-        severity: 'INFO',
-        description: 'Ação corretiva resolvida.',
-        personId: action.personId,
-      },
+    await this.audit.log({
+      action: 'CORRECTIVE_ACTION_RESOLVED',
+      personId: action.personId,
+      context:
+        'Ação resolvida manualmente. Reavaliação pendente.',
     })
 
-    // 🔁 EXIGÊNCIA INSTITUCIONAL
-    await this.prisma.event.create({
-      data: {
-        type: 'REASSESSMENT_REQUIRED',
-        severity: 'WARNING',
-        description:
-          'Reavaliação obrigatória exigida para encerrar o regime corretivo.',
-        personId: action.personId,
-      },
-    })
+    return { success: true }
+  }
 
-    // 🎓 Reabre a trilha mais recentemente avaliada (se existir)
-    const lastAssessment = await this.prisma.assessment.findFirst({
-      where: { personId: action.personId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        assignmentId: true,
-      },
-    })
+  // ----------------------------
+  // 🔁 REAVALIAÇÃO AUTOMÁTICA (COM ESTADO OPERACIONAL)
+  // ----------------------------
+  async processReassessment(personId: string) {
+    const state: OperationalState =
+      await this.operationalState.getState(personId)
 
-    if (lastAssessment?.assignmentId) {
-      await this.prisma.assignment.update({
-        where: { id: lastAssessment.assignmentId },
-        data: {
-          progress: 0,
-          risk: 'LOW',
-        },
-      })
+    if (state !== 'NORMAL') {
+      throw new ForbiddenException(
+        `Reavaliação bloqueada. Estado operacional atual: ${state}`,
+      )
     }
 
-    await this.snapshots.record({
-      personId: action.personId,
-      score: -20,
-      reason: 'Ação corretiva resolvida (reavaliação pendente)',
-    })
+    // Recalcula risco com base em eventos
+    const score =
+      await this.risk.recalculatePersonRisk(personId)
 
-    await this.risk.recalculatePersonRisk(action.personId)
+    // Regra MV1:
+    // score < 70 → regime encerrado
+    // score >= 70 → regime reaberto
+    if (score < 70) {
+      await this.prisma.correctiveAction.updateMany({
+        where: {
+          personId,
+          status: 'AWAITING_REASSESSMENT',
+        },
+        data: {
+          status: 'DONE',
+        },
+      })
 
-    return resolved
-  }
+      await this.audit.log({
+        action: 'CORRECTIVE_REGIME_CLOSED',
+        personId,
+        context:
+          'Reavaliação bem-sucedida. Risco normalizado.',
+      })
 
-  // ✅ Encerramento formal após reavaliação
-  async closeAfterReassessment(personId: string) {
-    const pending = await this.prisma.correctiveAction.findFirst({
+      return {
+        closed: true,
+        score,
+      }
+    }
+
+    await this.prisma.correctiveAction.updateMany({
       where: {
         personId,
         status: 'AWAITING_REASSESSMENT',
       },
-      orderBy: { createdAt: 'desc' },
-    })
-
-    if (!pending) return null
-
-    const closed = await this.prisma.correctiveAction.update({
-      where: { id: pending.id },
-      data: {
-        status: 'DONE',
-      },
-    })
-
-    await this.prisma.event.create({
-      data: {
-        type: 'CORRECTIVE_REGIME_CLOSED',
-        severity: 'SUCCESS',
-        description:
-          'Regime corretivo encerrado após reavaliação.',
-        personId,
-      },
-    })
-
-    await this.risk.recalculatePersonRisk(personId)
-
-    return closed
-  }
-
-  // ❌ Falha na reavaliação: volta a ser regime corretivo aberto
-  async reopenAfterFailedReassessment(personId: string) {
-    const pending = await this.prisma.correctiveAction.findFirst({
-      where: {
-        personId,
-        status: 'AWAITING_REASSESSMENT',
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-
-    if (!pending) return null
-
-    const reopened = await this.prisma.correctiveAction.update({
-      where: { id: pending.id },
       data: {
         status: 'OPEN',
       },
     })
 
-    await this.prisma.event.create({
-      data: {
-        type: 'REASSESSMENT_FAILED',
-        severity: 'CRITICAL',
-        description:
-          'Reavaliação falhou. Regime corretivo reaberto.',
-        personId,
-      },
+    await this.audit.log({
+      action: 'CORRECTIVE_REGIME_REOPENED',
+      personId,
+      context:
+        'Reavaliação falhou. Risco ainda elevado.',
     })
 
-    await this.risk.recalculatePersonRisk(personId)
-
-    return reopened
+    return {
+      closed: false,
+      score,
+    }
   }
 }

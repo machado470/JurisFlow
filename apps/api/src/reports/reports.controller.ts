@@ -1,7 +1,7 @@
 import {
   Controller,
   Get,
-  Req,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
@@ -14,16 +14,23 @@ export class ReportsController {
     private readonly reports: ReportsService,
   ) {}
 
+  /**
+   * �� FOTO EXECUTIVA
+   */
   @Get('executive')
-  async executive(@Req() req: any) {
-    const data =
-      await this.reports.getExecutiveReport(
-        req.user.orgId,
-      )
+  async executive() {
+    return this.reports.getExecutiveReport()
+  }
 
-    return {
-      success: true,
-      data,
-    }
+  /**
+   * 📈 MÉTRICAS EXECUTIVAS
+   */
+  @Get('executive/metrics')
+  async executiveMetrics(
+    @Query('days') days?: string,
+  ) {
+    return this.reports.getExecutiveMetrics(
+      days ? Number(days) : 30,
+    )
   }
 }

@@ -14,6 +14,9 @@
     "free": "bash ./scripts/free-port.sh 3000",
     "clean-start": "bash ./scripts/free-port.sh 3000 && pnpm run dev:api"
   },
+  "prisma": {
+    "seed": "tsx apps/api/prisma/seed.ts"
+  },
   "packageManager": "pnpm@8.15.4",
   "devDependencies": {
     "@prisma/client": "5.22.0",

@@ -1,12 +1,12 @@
 import {
   Controller,
   Get,
-  Post,
   Param,
-  Body,
+  Post,
   UseGuards,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { OperationalStateGuard } from '../people/operational-state.guard'
 import { CorrectiveActionsService } from './corrective-actions.service'
 
 @Controller('corrective-actions')
@@ -17,28 +17,28 @@ export class CorrectiveActionsController {
   ) {}
 
   @Get('person/:personId')
-  listByPerson(
+  async listByPerson(
     @Param('personId') personId: string,
   ) {
     return this.service.listByPerson(personId)
   }
 
-  @Post()
-  create(
-    @Body()
-    body: {
-      personId: string
-      reason: string
-    },
-  ) {
-    return this.service.create({
-      personId: body.personId,
-      reason: body.reason,
-    })
+  @Post(':id/resolve')
+  @UseGuards(OperationalStateGuard)
+  async resolve(@Param('id') id: string) {
+    return this.service.resolve(id)
   }
 
-  @Post(':id/resolve')
-  resolve(@Param('id') id: string) {
-    return this.service.resolve(id)
+  /**
+   * 🔁 FECHAMENTO AUTOMÁTICO DO REGIME
+   */
+  @Post('person/:personId/reassess')
+  @UseGuards(OperationalStateGuard)
+  async processReassessment(
+    @Param('personId') personId: string,
+  ) {
+    return this.service.processReassessment(
+      personId,
+    )
   }
 }

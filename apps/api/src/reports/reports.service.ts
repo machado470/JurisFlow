@@ -1,149 +1,102 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { TemporalRiskService } from '../risk/temporal-risk.service'
+import { ExecutiveMetricsService } from './executive-metrics.service'
 import { TimelineService } from '../timeline/timeline.service'
 
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+type ExecStatus = 'OK' | 'WARNING' | 'CRITICAL'
+type TrackStatus = 'SUCCESS' | 'WARNING' | 'CRITICAL'
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly temporal: TemporalRiskService,
+    private readonly temporalRisk: TemporalRiskService,
+    private readonly metrics: ExecutiveMetricsService,
     private readonly timeline: TimelineService,
   ) {}
 
-  async getExecutiveReport(orgId: string) {
+  async getExecutiveReport() {
     const people = await this.prisma.person.findMany({
-      where: { orgId, active: true },
-      select: { id: true, name: true },
+      include: { assignments: true },
     })
 
-    const assignments = await this.prisma.assignment.findMany({
-      where: {
-        person: { orgId },
-      },
-      include: {
-        track: true,
-      },
-    })
-
-    // 🔹 SUMMARY
-    const totalAssignments = assignments.length
-    const completedAssignments = assignments.filter(
-      a => a.progress === 100,
-    ).length
-
-    const completionRate =
-      totalAssignments === 0
-        ? 0
-        : Math.round(
-            (completedAssignments / totalAssignments) * 100,
-          )
-
-    // 🔹 RISK BY LEVEL
-    const riskByLevel: Record<RiskLevel, number> = {
-      LOW: 0,
-      MEDIUM: 0,
-      HIGH: 0,
+    const peopleStats: Record<ExecStatus, number> = {
+      OK: 0,
+      WARNING: 0,
       CRITICAL: 0,
     }
 
-    assignments.forEach(a => {
-      riskByLevel[a.risk]++
-    })
-
-    // 🔹 PEOPLE AT RISK
-    const peopleAtRisk = []
+    const peopleView = []
 
     for (const p of people) {
-      const urgency = await this.temporal.calculateUrgency(
-        p.id,
-      )
+      let urgency: ExecStatus = 'OK'
 
-      if (urgency !== 'NORMAL') {
-        peopleAtRisk.push({
-          id: p.id,
-          name: p.name,
-          risk: this.mapUrgencyToRisk(urgency),
-          openAssignments: assignments.filter(
-            a => a.personId === p.id && a.progress < 100,
-          ).length,
-        })
-      }
+      try {
+        const u = await this.temporalRisk.calculateUrgency(p.id)
+        if (u === 'CRITICAL') urgency = 'CRITICAL'
+        else if (u === 'WARNING') urgency = 'WARNING'
+      } catch {}
+
+      peopleStats[urgency]++
+
+      peopleView.push({
+        id: p.id,
+        name: p.name,
+        status: urgency,
+      })
     }
 
-    // 🔹 TRACK AGGREGATION
-    const tracksMap = new Map<string, any>()
+    const correctiveOpenCount =
+      await this.prisma.correctiveAction.count({
+        where: { status: 'OPEN' },
+      })
 
-    for (const a of assignments) {
-      if (!tracksMap.has(a.trackId)) {
-        tracksMap.set(a.trackId, {
-          id: a.track.id,
-          title: a.track.title,
-          description: a.track.description,
-          peopleCount: 0,
-          assignmentsOpen: 0,
-          completionRate: 0,
-          risks: [] as RiskLevel[],
-        })
-      }
+    const tracks = await this.prisma.track.findMany({
+      include: { assignments: true },
+      orderBy: { createdAt: 'desc' },
+    })
 
-      const t = tracksMap.get(a.trackId)
-      t.peopleCount++
-      if (a.progress < 100) t.assignmentsOpen++
-      t.risks.push(a.risk)
-    }
+    const tracksView = tracks.map(t => {
+      const peopleCount = t.assignments.length
+      const completionRate =
+        peopleCount === 0
+          ? 0
+          : Math.round(
+              t.assignments.reduce(
+                (s, a) => s + a.progress,
+                0,
+              ) / peopleCount,
+            )
 
-    const tracks = Array.from(tracksMap.values()).map(t => {
-      const completed =
-        t.peopleCount - t.assignmentsOpen
+      let status: TrackStatus = 'SUCCESS'
+      if (completionRate < 40) status = 'CRITICAL'
+      else if (completionRate < 80) status = 'WARNING'
 
       return {
         id: t.id,
         title: t.title,
-        description: t.description,
-        peopleCount: t.peopleCount,
-        assignmentsOpen: t.assignmentsOpen,
-        completionRate:
-          t.peopleCount === 0
-            ? 0
-            : Math.round((completed / t.peopleCount) * 100),
-        risk: this.maxRisk(t.risks),
+        peopleCount,
+        completionRate,
+        status,
       }
     })
 
-    // 🔹 RECENT EVENTS (ORG)
-    const recentEvents = await this.timeline.listByOrg(
-      orgId,
-    )
+    const timeline = await this.timeline.listGlobal()
 
     return {
-      summary: {
-        peopleCount: people.length,
-        totalAssignments,
-        completedAssignments,
-        completionRate,
-        riskByLevel,
-      },
-      tracks,
-      peopleAtRisk,
-      recentEvents,
+      peopleStats,
+      correctiveOpenCount,
+      people: peopleView,
+      tracks: tracksView,
+      timeline,
     }
   }
 
-  private mapUrgencyToRisk(
-    urgency: 'NORMAL' | 'WARNING' | 'CRITICAL',
-  ): RiskLevel {
-    if (urgency === 'CRITICAL') return 'CRITICAL'
-    if (urgency === 'WARNING') return 'HIGH'
-    return 'LOW'
-  }
+  async getExecutiveMetrics(days = 30) {
+    const correctiveSLA =
+      await this.metrics.getCorrectiveActionsSLA(days)
 
-  private maxRisk(risks: RiskLevel[]): RiskLevel {
-    if (risks.includes('CRITICAL')) return 'CRITICAL'
-    if (risks.includes('HIGH')) return 'HIGH'
-    if (risks.includes('MEDIUM')) return 'MEDIUM'
-    return 'LOW'
+    return { correctiveSLA }
   }
 }

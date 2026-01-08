@@ -1,36 +1,44 @@
 import api from './api'
 
-export type RiskLevel = 'LOW' | 'HIGH' | 'CRITICAL'
-
-export type PersonAtRisk = {
-  id: string
-  name: string
-  risk: RiskLevel
-}
-
 export type ExecutiveReport = {
-  peopleAtRisk: PersonAtRisk[]
-  peopleAtRiskSoon: PersonAtRisk[]
-  correctiveOpenCount: number
-}
-
-type ApiEnvelope<T> = {
-  success: boolean
-  data: T
-}
-
-/**
- * Suporta 2 formatos:
- * 1) Envelope: { success: true, data: {...} }
- * 2) Direto:   { ... }
- */
-export async function getExecutiveReport(): Promise<ExecutiveReport> {
-  const res = await api.get('/reports/executive')
-  const payload = res.data as any
-
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return (payload as ApiEnvelope<ExecutiveReport>).data
+  peopleStats: {
+    OK: number
+    WARNING: number
+    CRITICAL: number
   }
+  correctiveOpenCount: number
+  people: {
+    id: string
+    name: string
+    department?: string
+    status: 'OK' | 'WARNING' | 'CRITICAL'
+  }[]
+}
 
-  return payload as ExecutiveReport
+export type ExecutiveMetrics = {
+  correctiveSLA: {
+    windowDays: number
+    totalActions: number
+    resolvedSamples: number
+    closedSamples: number
+    avgResolveHours: number | null
+    avgCloseHours: number | null
+  }
+}
+
+export async function getExecutiveReport() {
+  const res = await api.get<ExecutiveReport>(
+    '/reports/executive',
+  )
+  return res.data
+}
+
+export async function getExecutiveMetrics(days = 30) {
+  const res = await api.get<ExecutiveMetrics>(
+    '/reports/executive/metrics',
+    {
+      params: { days },
+    },
+  )
+  return res.data
 }

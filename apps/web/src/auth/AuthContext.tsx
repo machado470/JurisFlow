@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import api from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { getMe } from '../services/me'
 
 type User = {
   id: string
@@ -9,8 +11,8 @@ type User = {
 }
 
 type SystemState = {
-  requiresOnboarding: boolean
-  urgency: string
+  requiresOnboarding?: boolean
+  urgency?: string
   assignments: any[]
 }
 
@@ -32,30 +34,30 @@ export function AuthProvider({ children }: { children: any }) {
     useState<SystemState | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      setLoading(false)
-      return
-    }
+  const navigate = useNavigate()
 
-    api
-      .get('/me')
-      .then(res => {
-        setUser({
-          id: res.data.id,
-          role: res.data.role,
-          orgId: res.data.orgId,
-          personId: res.data.personId,
-        })
-        setSystemState({
-          requiresOnboarding: res.data.requiresOnboarding,
-          urgency: res.data.urgency,
-          assignments: res.data.assignments,
-        })
+  async function loadMe() {
+    try {
+      const me = await getMe()
+      setUser(me.user)
+      setSystemState({
+        assignments: me.assignments ?? [],
+        urgency: me.urgency,
+        requiresOnboarding: me.requiresOnboarding,
       })
-      .finally(() => setLoading(false))
-  }, [])
+
+      // �� REDIRECIONAMENTO AUTOMÁTICO
+      if (me.user.role === 'ADMIN') {
+        navigate('/admin', { replace: true })
+      } else {
+        navigate('/app', { replace: true })
+      }
+    } catch {
+      logout()
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function login(email: string, password: string) {
     try {
@@ -65,21 +67,9 @@ export function AuthProvider({ children }: { children: any }) {
       })
 
       localStorage.setItem('token', res.data.token)
-
-      setUser(res.data.user)
-      setLoading(true)
-
-      const me = await api.get('/me')
-      setSystemState({
-        requiresOnboarding: me.data.requiresOnboarding,
-        urgency: me.data.urgency,
-        assignments: me.data.assignments,
-      })
-
-      setLoading(false)
+      await loadMe()
       return true
     } catch {
-      setLoading(false)
       return false
     }
   }
@@ -88,15 +78,33 @@ export function AuthProvider({ children }: { children: any }) {
     localStorage.removeItem('token')
     setUser(null)
     setSystemState(null)
+    navigate('/login', { replace: true })
   }
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      loadMe()
+    } else {
+      setLoading(false)
+    }
+  }, [])
 
   return (
     <AuthContext.Provider
-      value={{ user, systemState, loading, login, logout }}
+      value={{
+        user,
+        systemState,
+        loading,
+        login,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export function useAuth() {
+  return useContext(AuthContext)
+}

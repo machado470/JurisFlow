@@ -1,51 +1,64 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
   Post,
-  Body,
-  Req,
   UseGuards,
 } from '@nestjs/common'
-import { PeopleService } from './people.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { PeopleService } from './people.service'
 
 @Controller('people')
 @UseGuards(JwtAuthGuard)
 export class PeopleController {
-  constructor(private readonly service: PeopleService) {}
+  constructor(
+    private readonly peopleService: PeopleService,
+  ) {}
 
   @Get()
-  list(@Req() req) {
-    return this.service.listByOrg(req.user.orgId)
-  }
-
-  @Post()
-  create(
-    @Req() req,
-    @Body()
-    body: {
-      name: string
-      email: string
-      role: 'ADMIN' | 'COLLABORATOR'
-    },
-  ) {
-    return this.service.create({
-      ...body,
-      orgId: req.user.orgId,
-    })
+  async list() {
+    return this.peopleService.findAll()
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findById(id)
+  async get(@Param('id') id: string) {
+    return this.peopleService.findById(id)
   }
 
-  @Post(':id/offboard')
-  offboard(
+  /**
+   * 🔁 FÉRIAS / AFASTAMENTO
+   */
+  @Post(':id/deactivate')
+  async deactivate(
     @Param('id') id: string,
-    @Body('reason') reason: string,
+    @Body() body: { reason?: string },
   ) {
-    return this.service.offboardPerson(id, reason)
+    return this.peopleService.deactivate(
+      id,
+      body?.reason,
+    )
+  }
+
+  /**
+   * 🔁 RETORNO
+   */
+  @Post(':id/activate')
+  async activate(@Param('id') id: string) {
+    return this.peopleService.activate(id)
+  }
+
+  /**
+   * ⛔ DESLIGAMENTO DEFINITIVO
+   */
+  @Post(':id/offboard')
+  async offboard(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.peopleService.offboard(
+      id,
+      body?.reason,
+    )
   }
 }

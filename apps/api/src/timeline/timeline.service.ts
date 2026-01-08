@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { TimelineSeverity } from '@prisma/client'
+
+type TimelineLogInput = {
+  action: string
+  personId?: string
+}
 
 @Injectable()
 export class TimelineService {
@@ -8,32 +12,38 @@ export class TimelineService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async log(data: {
-    type: string
-    personId?: string
-    severity?: TimelineSeverity
-  }) {
-    return this.prisma.event.create({
+  /**
+   * 📝 Registrar evento humano
+   */
+  async log(input: TimelineLogInput) {
+    return this.prisma.auditEvent.create({
       data: {
-        type: data.type,
-        severity:
-          data.severity ?? TimelineSeverity.INFO,
-        ...(data.personId && {
-          person: {
-            connect: { id: data.personId },
-          },
-        }),
+        action: input.action,
+        person: input.personId
+          ? { connect: { id: input.personId } }
+          : undefined,
       },
     })
   }
 
-  async listByOrg(orgId: string) {
-    return this.prisma.event.findMany({
-      where: {
-        person: { orgId },
-      },
+  /**
+   * 👤 Timeline por pessoa
+   */
+  async listByPerson(personId: string) {
+    return this.prisma.auditEvent.findMany({
+      where: { personId },
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: 50,
+    })
+  }
+
+  /**
+   * 🌐 Timeline global
+   */
+  async listGlobal() {
+    return this.prisma.auditEvent.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
     })
   }
 }

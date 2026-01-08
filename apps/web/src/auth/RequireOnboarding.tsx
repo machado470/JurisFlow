@@ -12,13 +12,16 @@ export default function RequireOnboarding() {
     )
   }
 
-  // sem user → auth cuida
+  // auth já resolve ausência de usuário
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  // precisa onboarding → força rota
-  if (systemState?.requiresOnboarding) {
+  /**
+   * 🔒 Regra CRÍTICA:
+   * Só força onboarding se o backend afirmar explicitamente
+   */
+  if (systemState?.requiresOnboarding === true) {
     return <Navigate to="/onboarding" replace />
   }
 

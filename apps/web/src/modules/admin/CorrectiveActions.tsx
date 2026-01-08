@@ -1,110 +1,171 @@
-import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { useState } from 'react'
+
 import Card from '../../components/base/Card'
 import PageHeader from '../../components/base/PageHeader'
 import StatusBadge from '../../components/base/StatusBadge'
+import ConfirmDialog from '../../components/base/ConfirmDialog'
+
 import api from '../../services/api'
-
-type CorrectiveAction = {
-  id: string
-  reason: string
-  status: 'OPEN' | 'IN_PROGRESS' | 'DONE'
-  person: {
-    name: string
-  }
-}
-
-function statusTone(status: CorrectiveAction['status']) {
-  if (status === 'DONE') return 'success'
-  if (status === 'IN_PROGRESS') return 'warning'
-  return 'critical'
-}
+import { useCorrectiveActions } from '../../hooks/useCorrectiveActions'
+import { usePersonDetail } from '../../hooks/usePersonDetail'
+import { useAuth } from '../../auth/AuthContext'
 
 export default function CorrectiveActions() {
-  const [loading, setLoading] = useState(true)
-  const [actions, setActions] = useState<CorrectiveAction[]>([])
-  const [resolving, setResolving] = useState<string | null>(null)
+  const { personId } = useParams<{ personId: string }>()
+  const { systemState } = useAuth()
 
-  async function load() {
-    try {
-      const res = await api.get('/corrective-actions')
-      setActions(res.data ?? [])
-    } catch (err) {
-      console.error('[CorrectiveActions]', err)
-    } finally {
-      setLoading(false)
-    }
+  const { actions, loading, reload } =
+    useCorrectiveActions(personId)
+
+  const { reload: reloadPerson } =
+    usePersonDetail(personId!)
+
+  const [confirm, setConfirm] = useState<
+    null | { id: string }
+  >(null)
+
+  const [actionLoading, setActionLoading] =
+    useState(false)
+
+  const operationalState =
+    systemState?.operationalState ?? 'NORMAL'
+
+  const blocked = operationalState !== 'NORMAL'
+
+  if (loading) {
+    return (
+      <div className="text-sm opacity-60">
+        Carregando ações corretivas…
+      </div>
+    )
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  async function resolveAction(actionId: string) {
+    if (!personId || blocked) return
+    setActionLoading(true)
 
-  async function resolveAction(id: string) {
     try {
-      setResolving(id)
-      await api.patch(`/corrective-actions/${id}/resolve`)
-      await load()
-    } catch (err) {
-      console.error('[ResolveAction]', err)
-      alert('Erro ao resolver ação.')
+      await api.post(
+        `/corrective-actions/${actionId}/resolve`,
+      )
+
+      await api.post(
+        `/corrective-actions/person/${personId}/reassess`,
+      )
+
+      await reload()
+      await reloadPerson()
     } finally {
-      setResolving(null)
+      setActionLoading(false)
+      setConfirm(null)
     }
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
-        title="Ações Corretivas"
-        description="Acompanhamento e resolução de ações corretivas."
+        title="Ações corretivas"
+        description="Intervenções institucionais ativas"
       />
 
-      <Card>
-        {loading ? (
-          <div className="text-sm opacity-60">
-            Carregando ações…
+      {blocked && (
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium">
+                Ações bloqueadas
+              </div>
+              <div className="text-sm opacity-70 mt-1">
+                Estado operacional atual:{' '}
+                <strong>{operationalState}</strong>
+              </div>
+            </div>
+
+            <StatusBadge
+              label={operationalState}
+              tone="warning"
+            />
           </div>
-        ) : actions.length === 0 ? (
-          <div className="text-sm opacity-60">
-            Nenhuma ação corretiva registrada.
+        </Card>
+      )}
+
+      {actions.length === 0 ? (
+        <Card>
+          <div className="text-sm text-slate-400">
+            Nenhuma ação corretiva ativa.
           </div>
-        ) : (
-          <div className="space-y-3">
-            {actions.map(a => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-medium">
-                    {a.reason}
-                  </div>
-                  <div className="text-xs opacity-70">
-                    {a.person.name}
-                  </div>
+        </Card>
+      ) : (
+        actions.map(action => (
+          <Card key={action.id}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">
+                  {action.title ??
+                    'Ação corretiva'}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <StatusBadge
-                    label={a.status}
-                    tone={statusTone(a.status)}
-                  />
-
-                  {a.status !== 'DONE' && (
-                    <button
-                      onClick={() => resolveAction(a.id)}
-                      disabled={resolving === a.id}
-                      className="text-xs px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      Resolver
-                    </button>
-                  )}
+                <div className="text-xs opacity-60 mt-1">
+                  Criada em{' '}
+                  {new Date(
+                    action.createdAt,
+                  ).toLocaleString()}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
+
+              <div className="flex items-center gap-3">
+                <StatusBadge
+                  label={action.status}
+                  tone={
+                    action.status === 'OPEN'
+                      ? 'critical'
+                      : action.status ===
+                        'AWAITING_REASSESSMENT'
+                      ? 'warning'
+                      : 'success'
+                  }
+                />
+
+                {action.status === 'OPEN' && (
+                  <button
+                    disabled={
+                      actionLoading || blocked
+                    }
+                    onClick={() =>
+                      setConfirm({
+                        id: action.id,
+                      })
+                    }
+                    className={`
+                      text-sm px-4 py-2 rounded-lg
+                      ${
+                        blocked
+                          ? 'bg-slate-600/10 text-slate-400 cursor-not-allowed'
+                          : 'bg-emerald-500/10 text-emerald-400'
+                      }
+                    `}
+                  >
+                    Resolver
+                  </button>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))
+      )}
+
+      {confirm && (
+        <ConfirmDialog
+          title="Resolver ação corretiva"
+          description="Esta ação exigirá reavaliação automática."
+          onCancel={() => setConfirm(null)}
+          onConfirm={() =>
+            resolveAction(confirm.id)
+          }
+          loading={actionLoading}
+        />
+      )}
     </div>
   )
 }

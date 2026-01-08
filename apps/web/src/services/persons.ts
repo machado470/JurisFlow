@@ -9,7 +9,7 @@ export type PersonSummary = {
 }
 
 export async function listPeople(): Promise<PersonSummary[]> {
-  const { data } = await api.get('/persons')
+  const { data } = await api.get('/people')
   return data
 }
 
@@ -18,6 +18,6 @@ export async function createPerson(params: {
   email: string
   role: 'ADMIN' | 'COLLABORATOR'
 }) {
-  const { data } = await api.post('/persons', params)
+  const { data } = await api.post('/people', params)
   return data
 }

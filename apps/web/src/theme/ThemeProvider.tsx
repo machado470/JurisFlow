@@ -19,23 +19,40 @@ export const ThemeContext =
 
 export function ThemeProvider({
   children,
+  forceTheme,
 }: {
   children: ReactNode
+  forceTheme?: ThemeName
 }) {
-  const [theme, setTheme] = useState<ThemeName>('blue')
+  const [theme, setTheme] = useState<ThemeName>(
+    forceTheme ?? 'blue',
+  )
 
+  // 🔒 Tema forçado ignora localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('theme') as ThemeName | null
+    if (forceTheme) {
+      setTheme(forceTheme)
+      return
+    }
+
+    const saved = localStorage.getItem(
+      'theme',
+    ) as ThemeName | null
+
     if (saved && themes[saved]) {
       setTheme(saved)
     }
-  }, [])
+  }, [forceTheme])
 
+  // 🔒 Só persiste se NÃO for forçado
   useEffect(() => {
-    localStorage.setItem('theme', theme)
-  }, [theme])
+    if (!forceTheme) {
+      localStorage.setItem('theme', theme)
+    }
+  }, [theme, forceTheme])
 
   function toggleTheme() {
+    if (forceTheme) return
     setTheme(prev =>
       prev === 'blue' ? 'offwhite' : 'blue',
     )

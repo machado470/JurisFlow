@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =========================
-// ENUMS
-// =========================
-
 enum UserRole {
   ADMIN
   COLLABORATOR
@@ -36,9 +32,23 @@ enum TimelineSeverity {
   SUCCESS
 }
 
-// =========================
-// CORE
-// =========================
+enum ExceptionType {
+  VACATION
+  LEAVE
+  PAUSE
+}
+
+enum TrackStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum TrackItemType {
+  READING
+  ACTION
+  CHECKPOINT
+}
 
 model Organization {
   id                 String   @id @default(uuid())
@@ -94,24 +104,58 @@ model Person {
   auditEvents       AuditEvent[]
   riskSnapshots     RiskSnapshot[]
   exceptions        PersonException[]
+  itemCompletions   TrackItemCompletion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// =========================
-// EDUCAÇÃO
-// =========================
-
 model Track {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   title       String
   description String?
-  slug        String   @unique
-  createdAt   DateTime @default(now())
+  slug        String
+  version     Int         @default(1)
+  status      TrackStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
 
   assignments Assignment[]
   assessments Assessment[]
+  items       TrackItem[]
+
+  @@unique([slug, version])
+}
+
+model TrackItem {
+  id       String        @id @default(uuid())
+  trackId String
+  title   String
+  content String?
+  type    TrackItemType
+  order   Int
+
+  createdAt DateTime @default(now())
+
+  track Track @relation(fields: [trackId], references: [id])
+  completions TrackItemCompletion[]
+
+  @@unique([trackId, order])
+}
+
+model TrackItemCompletion {
+  id           String   @id @default(uuid())
+  itemId       String
+  personId     String
+  assignmentId String
+
+  completedAt DateTime @default(now())
+
+  item       TrackItem  @relation(fields: [itemId], references: [id])
+  person     Person     @relation(fields: [personId], references: [id])
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+
+  @@unique([itemId, personId])
 }
 
 model Assignment {
@@ -129,6 +173,7 @@ model Assignment {
   track  Track  @relation(fields: [trackId], references: [id])
 
   assessments Assessment[]
+  completions TrackItemCompletion[]
 
   @@unique([personId, trackId])
 }
@@ -150,10 +195,6 @@ model Assessment {
   track      Track      @relation(fields: [trackId], references: [id])
 }
 
-// =========================
-// GOVERNANÇA / RISCO
-// =========================
-
 model CorrectiveAction {
   id         String           @id @default(uuid())
   personId   String
@@ -164,6 +205,24 @@ model CorrectiveAction {
   createdAt DateTime @default(now())
 
   person Person @relation(fields: [personId], references: [id])
+}
+
+model PersonException {
+  id        String        @id @default(uuid())
+  personId  String
+  type      ExceptionType
+  reason    String
+  startsAt  DateTime
+  endsAt    DateTime
+
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([personId, startsAt, endsAt])
+  @@index([endsAt, processedAt])
 }
 
 model Event {
@@ -195,18 +254,6 @@ model RiskSnapshot {
   personId  String
   score     Int
   reason    String
-
-  createdAt DateTime @default(now())
-
-  person Person @relation(fields: [personId], references: [id])
-}
-
-model PersonException {
-  id       String   @id @default(uuid())
-  personId String
-  startsAt DateTime
-  endsAt   DateTime
-  reason   String?
 
   createdAt DateTime @default(now())
 

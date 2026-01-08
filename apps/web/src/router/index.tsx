@@ -1,101 +1,59 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 
-// 🔓 PÚBLICO
-import LandingPage from '../modules/landing/LandingPage'
-import Login from '../modules/auth/Login'
-
-// 🧭 ONBOARDING
-import Onboarding from '../modules/onboarding/Onboarding'
-
-// 🔐 GUARDS
-import EntryGate from './EntryGate'
 import RequireAuth from '../auth/RequireAuth'
 import RequireOnboarding from '../auth/RequireOnboarding'
 
-// 👑 ADMIN
-import AdminLayout from '../modules/admin/AdminLayout'
-import AdminDashboard from '../modules/admin/AdminDashboard'
-import People from '../modules/admin/People'
-import PersonDetail from '../modules/admin/PersonDetail'
-import Tracks from '../modules/admin/Tracks'
-import TrackDetail from '../modules/admin/TrackDetail'
-import Reports from '../modules/admin/Reports'
-import Audit from '../modules/admin/Audit'
-import Settings from '../modules/admin/Settings'
+import LandingPage from '../modules/landing/LandingPage'
+import Login from '../modules/auth/Login'
 
-// ▶️ COLABORADOR
+import AdminShell from '../modules/admin/AdminShell'
+import AdminDashboard from '../modules/admin/AdminDashboard'
+import TracksPage from '../modules/admin/TracksPage'
+import PeoplePage from '../modules/admin/PeoplePage'
+import PersonDetailPage from '../modules/admin/PersonDetailPage'
+import AuditPage from '../modules/admin/AuditPage'
+import EvaluationsPage from '../modules/admin/EvaluationsPage'
+
 import CollaboratorDashboard from '../modules/collaborator/CollaboratorDashboard'
-import AssignmentExecution from '../modules/collaborator/AssignmentExecution'
 
 export default function Router() {
   return (
     <Routes>
-      {/* PÚBLICO */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
 
-      {/* ONBOARDING */}
+      {/* REDIRECIONADOR PRINCIPAL */}
       <Route
-        path="/onboarding"
+        path="/app"
         element={
-          <EntryGate>
-            <Onboarding />
-          </EntryGate>
+          <RequireAuth>
+            <CollaboratorDashboard />
+          </RequireAuth>
         }
       />
 
       {/* ADMIN */}
-      <Route
-        path="/admin"
-        element={
-          <EntryGate>
-            <RequireAuth role="ADMIN">
-              <RequireOnboarding>
-                <AdminLayout />
-              </RequireOnboarding>
-            </RequireAuth>
-          </EntryGate>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="people" element={<People />} />
-        <Route path="people/:personId" element={<PersonDetail />} />
-        <Route path="tracks" element={<Tracks />} />
-        <Route path="tracks/:trackId" element={<TrackDetail />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="audit" element={<Audit />} />
-        <Route path="settings" element={<Settings />} />
+      <Route element={<RequireAuth role="ADMIN" />}>
+        <Route element={<RequireOnboarding />}>
+          <Route path="/admin" element={<AdminShell />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="trilhas" element={<TracksPage />} />
+            <Route path="pessoas" element={<PeoplePage />} />
+            <Route
+              path="pessoas/:id"
+              element={<PersonDetailPage />}
+            />
+            <Route path="auditoria" element={<AuditPage />} />
+            <Route
+              path="avaliacoes"
+              element={<EvaluationsPage />}
+            />
+          </Route>
+        </Route>
       </Route>
 
-      {/* COLABORADOR */}
-      <Route
-        path="/execucao"
-        element={
-          <EntryGate>
-            <RequireAuth role="COLLABORATOR">
-              <RequireOnboarding>
-                <CollaboratorDashboard />
-              </RequireOnboarding>
-            </RequireAuth>
-          </EntryGate>
-        }
-      />
-
-      <Route
-        path="/execucao/assignment/:assignmentId"
-        element={
-          <EntryGate>
-            <RequireAuth role="COLLABORATOR">
-              <RequireOnboarding>
-                <AssignmentExecution />
-              </RequireOnboarding>
-            </RequireAuth>
-          </EntryGate>
-        }
-      />
-
       {/* FALLBACK */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
 }

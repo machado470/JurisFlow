@@ -1,193 +1,92 @@
-import {
-  PrismaClient,
-  RiskLevel,
-  CorrectiveStatus,
-  TimelineSeverity,
-} from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-async function upsertPersonByEmail(params: {
-  name: string
-  email: string
-  role: string
-  riskScore: number
-  orgId: string
-}) {
-  const existing = await prisma.person.findFirst({
-    where: {
-      email: params.email,
-      orgId: params.orgId,
-    },
-  })
-
-  if (existing) {
-    return prisma.person.update({
-      where: { id: existing.id },
-      data: {
-        riskScore: params.riskScore,
-      },
-    })
-  }
-
-  return prisma.person.create({
-    data: {
-      name: params.name,
-      email: params.email,
-      role: params.role,
-      riskScore: params.riskScore,
-      orgId: params.orgId,
-    },
-  })
-}
-
 async function main() {
-  // =========================
-  // ORGANIZATION
-  // =========================
+  // ----------------------------
+  // 🏢 ORGANIZATION
+  // ----------------------------
   const org = await prisma.organization.upsert({
-    where: { slug: 'autoescola-demo' },
+    where: { slug: 'demo-org' },
     update: {},
     create: {
-      name: 'AutoEscola Demo',
-      slug: 'autoescola-demo',
+      name: 'Organização Demo',
+      slug: 'demo-org',
       requiresOnboarding: false,
     },
   })
 
-  // =========================
-  // ADMIN USER + PERSON
-  // =========================
-  await prisma.user.upsert({
+  // ----------------------------
+  // 👤 ADMIN USER
+  // ----------------------------
+  const passwordHash = await bcrypt.hash('demo', 10)
+
+  const user = await prisma.user.upsert({
     where: { email: 'admin@demo.com' },
-    update: { active: true },
+    update: {},
     create: {
       email: 'admin@demo.com',
-      password: '123456',
+      password: passwordHash,
       role: 'ADMIN',
       active: true,
       orgId: org.id,
-      person: {
-        create: {
-          name: 'Administrador Demo',
-          role: 'ADMIN',
-          orgId: org.id,
-        },
-      },
     },
   })
 
-  // =========================
-  // TRACK
-  // =========================
-  const track = await prisma.track.upsert({
-    where: { slug: 'treinamento-obrigatorio' },
+  // ----------------------------
+  // 🧍 PERSON (ADMIN)
+  // ----------------------------
+  const person = await prisma.person.upsert({
+    where: { userId: user.id },
     update: {},
     create: {
-      title: 'Treinamento Obrigatório',
-      slug: 'treinamento-obrigatorio',
-      description: 'Trilha base para validação de risco',
+      name: 'Admin Demo',
+      role: 'ADMIN',
+      userId: user.id,
+      orgId: org.id,
+      riskScore: 50,
     },
   })
 
-  // =========================
-  // PERSONS (CORRETO)
-  // =========================
-  const criticalPerson = await upsertPersonByEmail({
-    name: 'João Silva',
-    email: 'joao@demo.com',
-    role: 'COLLABORATOR',
-    riskScore: 90,
-    orgId: org.id,
+  // ----------------------------
+  // 📚 TRACK
+  // ----------------------------
+  const track = await prisma.track.upsert({
+    where: { slug: 'compliance-basico' },
+    update: {},
+    create: {
+      title: 'Compliance Básico',
+      slug: 'compliance-basico',
+      description: 'Trilha introdutória de compliance',
+    },
   })
 
-  const warningPerson = await upsertPersonByEmail({
-    name: 'Maria Souza',
-    email: 'maria@demo.com',
-    role: 'COLLABORATOR',
-    riskScore: 60,
-    orgId: org.id,
-  })
-
-  // =========================
-  // ASSIGNMENTS
-  // =========================
+  // ----------------------------
+  // 🔑 ASSIGNMENT
+  // ----------------------------
   await prisma.assignment.upsert({
     where: {
       personId_trackId: {
-        personId: criticalPerson.id,
+        personId: person.id,
         trackId: track.id,
       },
     },
-    update: {
-      risk: RiskLevel.CRITICAL,
-      progress: 20,
-    },
+    update: {},
     create: {
-      personId: criticalPerson.id,
+      personId: person.id,
       trackId: track.id,
-      risk: RiskLevel.CRITICAL,
-      progress: 20,
+      progress: 0,
+      risk: 'MEDIUM',
     },
   })
 
-  await prisma.assignment.upsert({
-    where: {
-      personId_trackId: {
-        personId: warningPerson.id,
-        trackId: track.id,
-      },
-    },
-    update: {
-      risk: RiskLevel.HIGH,
-      progress: 60,
-    },
-    create: {
-      personId: warningPerson.id,
-      trackId: track.id,
-      risk: RiskLevel.HIGH,
-      progress: 60,
-    },
-  })
-
-  // =========================
-  // CORRECTIVE ACTION
-  // =========================
-  await prisma.correctiveAction.create({
-    data: {
-      personId: criticalPerson.id,
-      reason: 'Treinamento obrigatório não concluído',
-      status: CorrectiveStatus.OPEN,
-    },
-  })
-
-  // =========================
-  // TIMELINE EVENTS
-  // =========================
-  await prisma.event.create({
-    data: {
-      personId: criticalPerson.id,
-      type: 'RISK_ESCALATION',
-      severity: TimelineSeverity.CRITICAL,
-      description: 'Risco elevado detectado automaticamente',
-    },
-  })
-
-  await prisma.event.create({
-    data: {
-      personId: warningPerson.id,
-      type: 'RISK_WARNING',
-      severity: TimelineSeverity.WARNING,
-      description: 'Risco médio-alto identificado',
-    },
-  })
-
-  console.log('✅ Seed executivo aplicado com sucesso')
+  console.log('✅ Seed aplicado com sucesso')
 }
 
 main()
-  .catch(e => {
-    console.error(e)
+  .catch(err => {
+    console.error(err)
     process.exit(1)
   })
   .finally(async () => {

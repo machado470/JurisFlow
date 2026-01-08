@@ -1,17 +1,16 @@
 import { Module } from '@nestjs/common'
-import { PrismaModule } from '../prisma/prisma.module'
-import { MeController } from './me.controller'
-import { RiskModule } from '../risk/risk.module'
+import { PeopleModule } from '../people/people.module'
 import { AssignmentsModule } from '../assignments/assignments.module'
+
+import { MeController } from './me.controller'
 
 @Module({
   imports: [
-    PrismaModule,
-    RiskModule,
+    PeopleModule,
     AssignmentsModule,
   ],
   controllers: [
-    MeController, // 🧠 EXPOSTO AQUI
+    MeController,
   ],
 })
 export class MeModule {}

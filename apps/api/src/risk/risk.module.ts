@@ -1,27 +1,24 @@
-import { Module, forwardRef } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 import { PrismaModule } from '../prisma/prisma.module'
-import { CorrectiveActionsModule } from '../corrective-actions/corrective-actions.module'
 
 import { RiskService } from './risk.service'
-import { RiskSnapshotService } from './risk-snapshot.service'
 import { TemporalRiskService } from './temporal-risk.service'
-import { RiskAutomationService } from './risk-automation.service'
+import { RiskSnapshotService } from './risk-snapshot.service'
+import { PersonSuspensionService } from './person-suspension.service'
 
 @Module({
-  imports: [
-    PrismaModule,
-    forwardRef(() => CorrectiveActionsModule),
-  ],
+  imports: [PrismaModule],
   providers: [
     RiskService,
-    RiskSnapshotService,
-    RiskAutomationService,
     TemporalRiskService,
+    RiskSnapshotService,
+    PersonSuspensionService,
   ],
   exports: [
     RiskService,
-    RiskSnapshotService,
     TemporalRiskService,
+    RiskSnapshotService,
+    PersonSuspensionService,
   ],
 })
 export class RiskModule {}
