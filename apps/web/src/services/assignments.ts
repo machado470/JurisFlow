@@ -1,26 +1,37 @@
 import api from './api'
 
-export async function startAssignment(id: string) {
-  const { data } = await api.post(
-    `/assignments/${id}/start`,
-  )
-  return data
+export type AssignmentStatus =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+
+export type MyAssignment = {
+  id: string
+  progress: number
+  status: AssignmentStatus
+  track: {
+    id: string
+    title: string
+  }
 }
 
-export async function updateAssignmentProgress(
-  id: string,
-  progress: number,
-) {
-  const { data } = await api.patch(
-    `/assignments/${id}/progress`,
-    { progress },
+export async function listMyAssignments() {
+  const res = await api.get<MyAssignment[]>(
+    '/assignments/my',
   )
-  return data
+  return res.data
+}
+
+export async function startAssignment(id: string) {
+  const res = await api.post(
+    `/assignments/${id}/start`,
+  )
+  return res.data
 }
 
 export async function completeAssignment(id: string) {
-  const { data } = await api.post(
+  const res = await api.post(
     `/assignments/${id}/complete`,
   )
-  return data
+  return res.data
 }

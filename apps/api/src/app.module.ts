@@ -34,9 +34,11 @@ import { TimelineModule } from './timeline/timeline.module'
 // exceções humanas
 import { ExceptionsModule } from './exceptions/exceptions.module'
 
+// 🧠 GOVERNANÇA OPERACIONAL
+import { GovernanceModule } from './governance/governance.module'
+
 @Module({
   imports: [
-    // 🔑 ENV GLOBAL (OBRIGATÓRIO)
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -65,6 +67,9 @@ import { ExceptionsModule } from './exceptions/exceptions.module'
     TimelineModule,
 
     ExceptionsModule,
+
+    // 🔥 MOTOR DE GOVERNANÇA
+    GovernanceModule,
   ],
 })
 export class AppModule {}

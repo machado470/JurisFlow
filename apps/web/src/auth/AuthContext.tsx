@@ -1,26 +1,66 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
+import type { ReactNode } from 'react'
 import api from '../services/api'
-import { useNavigate } from 'react-router-dom'
 import { getMe } from '../services/me'
 
-type User = {
+/**
+ * 🔐 Tipos alinhados ao backend
+ */
+
+export type UserRole = 'ADMIN' | 'COLLABORATOR'
+
+export type User = {
   id: string
-  role: 'ADMIN' | 'COLLABORATOR'
+  email: string
+  role: UserRole
   orgId: string
   personId: string | null
 }
 
-type SystemState = {
-  requiresOnboarding?: boolean
-  urgency?: string
-  assignments: any[]
+export type OperationalState =
+  | 'NORMAL'
+  | 'RESTRICTED'
+  | 'SUSPENDED'
+
+export type OperationalStatus = {
+  state: OperationalState
+  reason?: string
 }
 
+export type AssignmentStatus =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+
+export type Assignment = {
+  id: string
+  progress: number
+  status: AssignmentStatus
+  track: {
+    id: string
+    title: string
+  }
+}
+
+export type SystemState = {
+  operational: OperationalStatus
+  assignments: Assignment[]
+}
+
+/**
+ * 🧠 Contexto
+ */
 type AuthContextType = {
   user: User | null
   systemState: SystemState | null
   loading: boolean
   login: (email: string, password: string) => Promise<boolean>
+  refresh: () => Promise<void>
   logout: () => void
 }
 
@@ -28,63 +68,79 @@ const AuthContext = createContext<AuthContextType>(
   {} as AuthContextType,
 )
 
-export function AuthProvider({ children }: { children: any }) {
+/**
+ * 🧩 Provider
+ */
+export function AuthProvider({
+  children,
+}: {
+  children: ReactNode
+}) {
   const [user, setUser] = useState<User | null>(null)
   const [systemState, setSystemState] =
     useState<SystemState | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const navigate = useNavigate()
+  /**
+   * 🔁 Recarrega estado autenticado
+   */
+  async function refresh() {
+    setLoading(true)
 
-  async function loadMe() {
     try {
-      const me = await getMe()
-      setUser(me.user)
-      setSystemState({
-        assignments: me.assignments ?? [],
-        urgency: me.urgency,
-        requiresOnboarding: me.requiresOnboarding,
-      })
+      const data = await getMe()
 
-      // �� REDIRECIONAMENTO AUTOMÁTICO
-      if (me.user.role === 'ADMIN') {
-        navigate('/admin', { replace: true })
-      } else {
-        navigate('/app', { replace: true })
-      }
+      setUser(data.user ?? null)
+      setSystemState({
+        operational: data.operational,
+        assignments: data.assignments ?? [],
+      })
     } catch {
-      logout()
+      setUser(null)
+      setSystemState(null)
+      localStorage.removeItem('token')
     } finally {
       setLoading(false)
     }
   }
 
-  async function login(email: string, password: string) {
+  /**
+   * 🔐 Login
+   */
+  async function login(
+    email: string,
+    password: string,
+  ): Promise<boolean> {
     try {
-      const res = await api.post('/auth/login', {
+      const { data } = await api.post('/auth/login', {
         email,
         password,
       })
 
-      localStorage.setItem('token', res.data.token)
-      await loadMe()
+      if (!data?.token) return false
+
+      localStorage.setItem('token', data.token)
+      await refresh()
+
       return true
     } catch {
       return false
     }
   }
 
+  /**
+   * 🚪 Logout
+   */
   function logout() {
     localStorage.removeItem('token')
     setUser(null)
     setSystemState(null)
-    navigate('/login', { replace: true })
+    window.location.href = '/login'
   }
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      loadMe()
+    if (localStorage.getItem('token')) {
+      refresh()
     } else {
       setLoading(false)
     }
@@ -97,6 +153,7 @@ export function AuthProvider({ children }: { children: any }) {
         systemState,
         loading,
         login,
+        refresh,
         logout,
       }}
     >
@@ -105,6 +162,9 @@ export function AuthProvider({ children }: { children: any }) {
   )
 }
 
+/**
+ * 🪝 Hook público
+ */
 export function useAuth() {
   return useContext(AuthContext)
 }

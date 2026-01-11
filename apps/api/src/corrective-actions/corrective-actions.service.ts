@@ -1,29 +1,16 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { AuditService } from '../audit/audit.service'
-import { RiskService } from '../risk/risk.service'
-import {
-  OperationalStateService,
-  OperationalState,
-} from '../people/operational-state.service'
+import { TimelineService } from '../timeline/timeline.service'
+import { OperationalStateService } from '../people/operational-state.service'
 
 @Injectable()
 export class CorrectiveActionsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
-    private readonly risk: RiskService,
+    private readonly timeline: TimelineService,
     private readonly operationalState: OperationalStateService,
   ) {}
 
-  // ----------------------------
-  // 📋 LISTAGEM
-  // ----------------------------
   async listByPerson(personId: string) {
     return this.prisma.correctiveAction.findMany({
       where: { personId },
@@ -31,120 +18,42 @@ export class CorrectiveActionsService {
     })
   }
 
-  // ----------------------------
-  // ✅ RESOLUÇÃO MANUAL (COM ESTADO OPERACIONAL)
-  // ----------------------------
-  async resolve(actionId: string) {
+  async resolve(id: string) {
     const action =
       await this.prisma.correctiveAction.findUnique({
-        where: { id: actionId },
+        where: { id },
       })
 
-    if (!action) {
-      throw new NotFoundException(
-        'Ação corretiva não encontrada',
-      )
-    }
+    if (!action) return null
 
-    if (action.status !== 'OPEN') {
-      throw new BadRequestException(
-        'Ação não está aberta',
-      )
-    }
-
-    const state: OperationalState =
-      await this.operationalState.getState(
-        action.personId,
-      )
-
-    if (state !== 'NORMAL') {
-      throw new ForbiddenException(
-        `Ação bloqueada. Estado operacional atual: ${state}`,
-      )
-    }
-
-    await this.prisma.correctiveAction.update({
-      where: { id: actionId },
-      data: {
-        status: 'AWAITING_REASSESSMENT',
-        resolvedAt: new Date(),
-      },
-    })
-
-    await this.audit.log({
-      action: 'CORRECTIVE_ACTION_RESOLVED',
-      personId: action.personId,
-      context:
-        'Ação resolvida manualmente. Reavaliação pendente.',
-    })
-
-    return { success: true }
-  }
-
-  // ----------------------------
-  // 🔁 REAVALIAÇÃO AUTOMÁTICA (COM ESTADO OPERACIONAL)
-  // ----------------------------
-  async processReassessment(personId: string) {
-    const state: OperationalState =
-      await this.operationalState.getState(personId)
-
-    if (state !== 'NORMAL') {
-      throw new ForbiddenException(
-        `Reavaliação bloqueada. Estado operacional atual: ${state}`,
-      )
-    }
-
-    // Recalcula risco com base em eventos
-    const score =
-      await this.risk.recalculatePersonRisk(personId)
-
-    // Regra MV1:
-    // score < 70 → regime encerrado
-    // score >= 70 → regime reaberto
-    if (score < 70) {
-      await this.prisma.correctiveAction.updateMany({
-        where: {
-          personId,
-          status: 'AWAITING_REASSESSMENT',
-        },
+    const resolved =
+      await this.prisma.correctiveAction.update({
+        where: { id },
         data: {
           status: 'DONE',
+          resolvedAt: new Date(),
         },
       })
 
-      await this.audit.log({
-        action: 'CORRECTIVE_REGIME_CLOSED',
-        personId,
-        context:
-          'Reavaliação bem-sucedida. Risco normalizado.',
-      })
+    // 🔄 Recalcular estado operacional
+    await this.operationalState.getStatus(
+      action.personId,
+    )
 
-      return {
-        closed: true,
-        score,
-      }
-    }
-
-    await this.prisma.correctiveAction.updateMany({
-      where: {
-        personId,
-        status: 'AWAITING_REASSESSMENT',
-      },
-      data: {
-        status: 'OPEN',
-      },
+    await this.timeline.log({
+      action: 'CORRECTIVE_ACTION_RESOLVED',
+      personId: action.personId,
+      description: action.reason,
     })
 
-    await this.audit.log({
-      action: 'CORRECTIVE_REGIME_REOPENED',
-      personId,
-      context:
-        'Reavaliação falhou. Risco ainda elevado.',
-    })
+    return resolved
+  }
 
-    return {
-      closed: false,
-      score,
-    }
+  /**
+   * 🔁 Compatibilidade explícita
+   * Usado por assessments / controllers antigos
+   */
+  async processReassessment(correctiveActionId: string) {
+    return this.resolve(correctiveActionId)
   }
 }

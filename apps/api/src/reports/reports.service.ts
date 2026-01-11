@@ -1,88 +1,111 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { TemporalRiskService } from '../risk/temporal-risk.service'
 import { ExecutiveMetricsService } from './executive-metrics.service'
 import { TimelineService } from '../timeline/timeline.service'
+import { OperationalStateService } from '../people/operational-state.service'
 
-type ExecStatus = 'OK' | 'WARNING' | 'CRITICAL'
-type TrackStatus = 'SUCCESS' | 'WARNING' | 'CRITICAL'
+type Urgency =
+  | 'OK'
+  | 'WARNING'
+  | 'CRITICAL'
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly temporalRisk: TemporalRiskService,
+    private readonly operationalState: OperationalStateService,
     private readonly metrics: ExecutiveMetricsService,
     private readonly timeline: TimelineService,
   ) {}
 
-  async getExecutiveReport() {
+  async getExecutiveReport(orgId: string) {
     const people = await this.prisma.person.findMany({
-      include: { assignments: true },
+      where: { orgId },
+      select: { id: true, name: true },
     })
 
-    const peopleStats: Record<ExecStatus, number> = {
+    const peopleStats: Record<Urgency, number> = {
       OK: 0,
       WARNING: 0,
       CRITICAL: 0,
     }
 
-    const peopleView = []
+    const peopleView: {
+      id: string
+      name: string
+      status: Urgency
+    }[] = []
 
     for (const p of people) {
-      let urgency: ExecStatus = 'OK'
+      const operational =
+        await this.operationalState.getStatus(p.id)
 
-      try {
-        const u = await this.temporalRisk.calculateUrgency(p.id)
-        if (u === 'CRITICAL') urgency = 'CRITICAL'
-        else if (u === 'WARNING') urgency = 'WARNING'
-      } catch {}
+      let status: Urgency = 'OK'
 
-      peopleStats[urgency]++
+      if (operational.state === 'WARNING') {
+        status = 'WARNING'
+      }
 
+      if (
+        operational.state === 'RESTRICTED' ||
+        operational.state === 'SUSPENDED'
+      ) {
+        status = 'CRITICAL'
+      }
+
+      peopleStats[status]++
       peopleView.push({
         id: p.id,
         name: p.name,
-        status: urgency,
+        status,
       })
     }
 
     const correctiveOpenCount =
       await this.prisma.correctiveAction.count({
-        where: { status: 'OPEN' },
+        where: {
+          status: 'OPEN',
+          person: { orgId },
+        },
       })
 
     const tracks = await this.prisma.track.findMany({
+      where: { orgId },
       include: { assignments: true },
       orderBy: { createdAt: 'desc' },
     })
 
     const tracksView = tracks.map(t => {
-      const peopleCount = t.assignments.length
-      const completionRate =
-        peopleCount === 0
+      const count = t.assignments.length
+      const rate =
+        count === 0
           ? 0
           : Math.round(
               t.assignments.reduce(
                 (s, a) => s + a.progress,
                 0,
-              ) / peopleCount,
+              ) / count,
             )
 
-      let status: TrackStatus = 'SUCCESS'
-      if (completionRate < 40) status = 'CRITICAL'
-      else if (completionRate < 80) status = 'WARNING'
+      let status:
+        | 'SUCCESS'
+        | 'WARNING'
+        | 'CRITICAL' = 'SUCCESS'
+
+      if (rate < 40) status = 'CRITICAL'
+      else if (rate < 80) status = 'WARNING'
 
       return {
         id: t.id,
         title: t.title,
-        peopleCount,
-        completionRate,
+        peopleCount: count,
+        completionRate: rate,
         status,
       }
     })
 
-    const timeline = await this.timeline.listGlobal()
+    const timeline =
+      await this.timeline.listGlobal()
 
     return {
       peopleStats,
@@ -94,9 +117,6 @@ export class ReportsService {
   }
 
   async getExecutiveMetrics(days = 30) {
-    const correctiveSLA =
-      await this.metrics.getCorrectiveActionsSLA(days)
-
-    return { correctiveSLA }
+    return this.metrics.getCorrectiveActionsSLA(days)
   }
 }

@@ -1,26 +1,33 @@
 import api from './api'
 
-export type TimelineSource = 'AUDIT' | 'EVENT' | 'RISK'
-export type TimelineSeverity =
-  | 'INFO'
-  | 'WARNING'
-  | 'CRITICAL'
-  | 'SUCCESS'
-
-export type TimelineItem = {
+/**
+ * 📜 Evento de auditoria (fonte da verdade)
+ * Alinhado com TimelineService + presenter do backend
+ */
+export type AuditEvent = {
   id: string
-  source: TimelineSource
-  title: string
-  description: string
-  impact?: string | null
-  severity: TimelineSeverity
+  action: string
+  context?: string | null
   createdAt: string
-  personName?: string
+  personName?: string | null
 }
 
+/**
+ * 📜 Timeline global (admin)
+ */
+export async function getGlobalTimeline(): Promise<AuditEvent[]> {
+  const { data } = await api.get('/timeline')
+  return data
+}
+
+/**
+ * 👤 Timeline por pessoa (admin / detalhe)
+ */
 export async function getPersonTimeline(
   personId: string,
-): Promise<TimelineItem[]> {
-  const res = await api.get(`/timeline/person/${personId}`)
-  return res.data.data
+): Promise<AuditEvent[]> {
+  const { data } = await api.get(
+    `/timeline/person/${personId}`,
+  )
+  return data
 }

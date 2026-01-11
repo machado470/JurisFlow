@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common'
 import { PrismaModule } from '../prisma/prisma.module'
-import { AuditModule } from '../audit/audit.module'
-import { RiskModule } from '../risk/risk.module'
-import { PeopleModule } from '../people/people.module'
 import { TimelineModule } from '../timeline/timeline.module'
+import { OperationalStateModule } from '../people/operational-state.module'
 
 import { AssignmentsService } from './assignments.service'
 import { AssignmentsController } from './assignments.controller'
@@ -11,10 +9,10 @@ import { AssignmentsController } from './assignments.controller'
 @Module({
   imports: [
     PrismaModule,
-    AuditModule,
-    RiskModule,
-    PeopleModule,
     TimelineModule,
+
+    // ✅ OBRIGATÓRIO — por causa do OperationalStateGuard
+    OperationalStateModule,
   ],
   providers: [
     AssignmentsService,

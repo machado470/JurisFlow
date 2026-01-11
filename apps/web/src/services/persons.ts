@@ -6,18 +6,21 @@ export type PersonSummary = {
   email?: string
   role: string
   active: boolean
+  riskScore: number
 }
 
-export async function listPeople(): Promise<PersonSummary[]> {
-  const { data } = await api.get('/people')
-  return data
+export async function listPeople() {
+  const res = await api.get<PersonSummary[]>(
+    '/people',
+  )
+  return res.data
 }
 
-export async function createPerson(params: {
+export async function createPerson(data: {
   name: string
-  email: string
+  email?: string
   role: 'ADMIN' | 'COLLABORATOR'
 }) {
-  const { data } = await api.post('/people', params)
-  return data
+  const res = await api.post('/people', data)
+  return res.data
 }

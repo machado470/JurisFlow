@@ -1,32 +1,32 @@
 import { useEffect, useState } from 'react'
-import { listPeople } from '../services/persons'
-import type { PersonSummary } from '../services/persons'
+import {
+  listPeople,
+  type PersonSummary,
+} from '../services/persons'
 
 export function usePersons() {
-  const [data, setData] = useState<PersonSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<PersonSummary[]>([])
+
+  async function load() {
+    setLoading(true)
+    try {
+      const people = await listPeople()
+      setData(people)
+    } catch {
+      setData([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true)
-        const people = await listPeople()
-        setData(people)
-      } catch (err) {
-        console.error('[usePersons]', err)
-        setError('Erro ao carregar pessoas')
-      } finally {
-        setLoading(false)
-      }
-    }
-
     load()
   }, [])
 
   return {
-    data,
     loading,
-    error,
+    data,
+    reload: load,
   }
 }

@@ -1,18 +1,23 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import type { UserRole } from './AuthContext'
 import { useAuth } from './AuthContext'
 
 export default function RequireAuth({
   role,
   children,
 }: {
-  role?: 'ADMIN' | 'COLLABORATOR'
+  role?: UserRole
   children?: ReactNode
 }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div>Carregando…</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        Carregando…
+      </div>
+    )
   }
 
   if (!user) {
@@ -23,12 +28,5 @@ export default function RequireAuth({
     return <Navigate to="/login" replace />
   }
 
-  // 🔑 SUPORTE DUPLO:
-  // - com children → renderiza children
-  // - sem children → usa Outlet (rotas aninhadas)
-  if (children) {
-    return <>{children}</>
-  }
-
-  return <Outlet />
+  return children ? <>{children}</> : <Outlet />
 }

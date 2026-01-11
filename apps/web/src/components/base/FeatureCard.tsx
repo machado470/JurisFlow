@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export default function FeatureCard({
   icon,
@@ -25,7 +25,6 @@ export default function FeatureCard({
         hover:border-white/20
       "
     >
-      {/* glow animado */}
       <div
         className="
           pointer-events-none
@@ -58,9 +57,7 @@ export default function FeatureCard({
           )}
         </div>
 
-        <h3 className="text-lg font-medium text-white">
-          {title}
-        </h3>
+        <h3 className="text-lg font-medium text-white">{title}</h3>
 
         <p className="text-sm text-slate-400 leading-relaxed">
           {children}
@@ -69,4 +66,3 @@ export default function FeatureCard({
     </div>
   )
 }
-

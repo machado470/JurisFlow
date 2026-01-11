@@ -1,10 +1,10 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
-const PUBLIC_ROUTES = ['/', '/login', '/logout']
+const PUBLIC_ROUTES = ['/', '/login']
 
 export default function EntryGate() {
-  const { token, user, systemState, loading } = useAuth()
+  const { user, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -15,38 +15,21 @@ export default function EntryGate() {
     )
   }
 
-  // 🌐 Rotas públicas reais (landing, login, logout)
+  // 🌐 Rotas públicas
   if (PUBLIC_ROUTES.includes(location.pathname)) {
     return null
   }
 
   // 🔓 Sem sessão → login
-  if (!token || !user) {
+  if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  if (!systemState) return null
-
   // 👑 ADMIN
-  if (systemState.isAdmin) {
-    if (
-      systemState.requiresOnboarding &&
-      location.pathname !== '/admin/onboarding'
-    ) {
-      return <Navigate to="/admin/onboarding" replace />
-    }
-
-    if (
-      !systemState.requiresOnboarding &&
-      location.pathname === '/admin/onboarding'
-    ) {
-      return <Navigate to="/admin" replace />
-    }
-
+  if (user.role === 'ADMIN') {
     if (!location.pathname.startsWith('/admin')) {
       return <Navigate to="/admin" replace />
     }
-
     return null
   }
 

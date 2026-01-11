@@ -29,7 +29,7 @@ export default function CorrectiveActions() {
     useState(false)
 
   const operationalState =
-    systemState?.operationalState ?? 'NORMAL'
+    systemState?.operational.state ?? 'NORMAL'
 
   const blocked = operationalState !== 'NORMAL'
 
@@ -102,8 +102,7 @@ export default function CorrectiveActions() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">
-                  {action.title ??
-                    'Ação corretiva'}
+                  Ação corretiva institucional
                 </div>
 
                 <div className="text-xs opacity-60 mt-1">

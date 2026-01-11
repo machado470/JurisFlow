@@ -3,6 +3,7 @@ import {
   Get,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { ReportsService } from './reports.service'
@@ -15,11 +16,13 @@ export class ReportsController {
   ) {}
 
   /**
-   * �� FOTO EXECUTIVA
+   * 📸 FOTO EXECUTIVA
    */
   @Get('executive')
-  async executive() {
-    return this.reports.getExecutiveReport()
+  async executive(@Req() req) {
+    return this.reports.getExecutiveReport(
+      req.user.orgId,
+    )
   }
 
   /**

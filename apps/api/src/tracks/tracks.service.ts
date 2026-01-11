@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 
@@ -14,8 +11,6 @@ function slugify(text: string) {
     .replace(/(^-|-$)/g, '')
 }
 
-type TrackStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
-
 @Injectable()
 export class TracksService {
   constructor(
@@ -24,23 +19,17 @@ export class TracksService {
   ) {}
 
   async listForDashboard(orgId: string) {
-    // ⚠️ Nota: Track ainda não tem orgId no schema.
-    // Hoje isso lista trilhas globais. Para produção de verdade, Track precisa ter orgId.
     const tracks = await this.prisma.track.findMany({
+      where: { orgId },
       orderBy: { createdAt: 'desc' },
       include: {
-        assignments: {
-          include: { person: true },
-        },
+        assignments: { include: { person: true } },
       },
     })
 
     return tracks.map(t => {
       const total = t.assignments.length
-      const completed = t.assignments.filter(
-        a => a.progress === 100,
-      ).length
-
+      const completed = t.assignments.filter(a => a.progress === 100).length
       const completionRate =
         total === 0 ? 0 : Math.round((completed / total) * 100)
 
@@ -56,26 +45,20 @@ export class TracksService {
     })
   }
 
-  async getById(id: string) {
+  async getById(id: string, orgId: string) {
     return this.prisma.track.findFirstOrThrow({
-      where: { id },
+      where: { id, orgId },
       include: {
-        assignments: {
-          include: { person: true },
-        },
+        assignments: { include: { person: true } },
       },
     })
   }
 
-  async create(params: {
-    title: string
-    description?: string
-    orgId: string
-  }) {
+  async create(params: { title: string; description?: string; orgId: string }) {
     const baseSlug = slugify(params.title)
 
     const lastVersion = await this.prisma.track.findFirst({
-      where: { slug: baseSlug },
+      where: { slug: baseSlug, orgId: params.orgId },
       orderBy: { version: 'desc' },
     })
 
@@ -88,12 +71,13 @@ export class TracksService {
         slug: baseSlug,
         version,
         status: 'DRAFT',
+        orgId: params.orgId,
       },
     })
 
     await this.audit.log({
       action: 'TRACK_CREATED',
-      context: `Trilha criada: "${track.title}" (slug=${track.slug} v${track.version}) status=${track.status}`,
+      context: `Track "${track.title}" v${track.version}`,
     })
 
     return track
@@ -101,113 +85,56 @@ export class TracksService {
 
   async update(
     id: string,
+    orgId: string,
     params: { title?: string; description?: string },
   ) {
-    const track = await this.prisma.track.findUnique({
+    const track = await this.prisma.track.findFirst({
+      where: { id, orgId },
+    })
+
+    if (!track) throw new BadRequestException('Trilha não encontrada')
+    if (track.status !== 'DRAFT')
+      throw new BadRequestException('Somente DRAFT pode ser editada')
+
+    return this.prisma.track.update({
       where: { id },
-      select: { id: true, status: true, title: true, slug: true, version: true },
+      data: params,
     })
-
-    if (!track) {
-      throw new BadRequestException('Trilha não encontrada')
-    }
-
-    if (track.status !== 'DRAFT') {
-      throw new BadRequestException(
-        'Somente trilhas em rascunho (DRAFT) podem ser editadas',
-      )
-    }
-
-    const updated = await this.prisma.track.update({
-      where: { id },
-      data: {
-        title: params.title,
-        description: params.description,
-      },
-    })
-
-    await this.audit.log({
-      action: 'TRACK_UPDATED',
-      context: `Trilha editada (DRAFT): "${track.title}" (slug=${track.slug} v${track.version})`,
-    })
-
-    return updated
   }
 
-  async publish(id: string) {
-    const track = await this.prisma.track.findUnique({
-      where: { id },
+  async publish(id: string, orgId: string) {
+    const track = await this.prisma.track.findFirst({
+      where: { id, orgId },
     })
 
-    if (!track) {
-      throw new BadRequestException('Trilha não encontrada')
-    }
+    if (!track) throw new BadRequestException('Trilha não encontrada')
+    if (track.status !== 'DRAFT')
+      throw new BadRequestException('Apenas DRAFT pode ser publicada')
 
-    if (track.status !== 'DRAFT') {
-      throw new BadRequestException(
-        'Apenas trilhas em rascunho (DRAFT) podem ser publicadas',
-      )
-    }
-
-    const updated = await this.prisma.track.update({
+    return this.prisma.track.update({
       where: { id },
       data: { status: 'ACTIVE' },
     })
-
-    await this.audit.log({
-      action: 'TRACK_PUBLISHED',
-      context: `Trilha publicada: "${track.title}" (slug=${track.slug} v${track.version})`,
-    })
-
-    return updated
   }
 
-  async archive(id: string) {
-    const track = await this.prisma.track.findUnique({
-      where: { id },
+  async archive(id: string, orgId: string) {
+    const track = await this.prisma.track.findFirst({
+      where: { id, orgId },
     })
 
-    if (!track) {
-      throw new BadRequestException('Trilha não encontrada')
-    }
+    if (!track) throw new BadRequestException('Trilha não encontrada')
 
-    if (track.status === 'ARCHIVED') {
-      return {
-        success: true,
-        message: 'Trilha já estava arquivada',
-        closedAssignments: 0,
-        track,
-      }
-    }
-
-    // 1) Arquivar trilha
     const updated = await this.prisma.track.update({
       where: { id },
       data: { status: 'ARCHIVED' },
     })
 
-    // 2) Encerrar assignments abertos (não deletar: manter evidência)
-    const closeResult = await this.prisma.assignment.updateMany({
-      where: {
-        trackId: id,
-        progress: { lt: 100 },
-      },
-      data: {
-        progress: 100,
-      },
+    await this.prisma.assignment.updateMany({
+      where: { trackId: id, progress: { lt: 100 } },
+      data: { progress: 100 },
     })
 
-    await this.audit.log({
-      action: 'TRACK_ARCHIVED',
-      context: `Trilha arquivada: "${track.title}" (slug=${track.slug} v${track.version}) | assignments encerrados=${closeResult.count}`,
-    })
-
-    return {
-      success: true,
-      message: 'Trilha arquivada e assignments encerrados',
-      closedAssignments: closeResult.count,
-      track: updated,
-    }
+    return updated
   }
 
   async assignPeople(params: {
@@ -215,20 +142,14 @@ export class TracksService {
     personIds: string[]
     orgId: string
   }) {
-    if (!params.personIds || params.personIds.length === 0) {
-      return { assigned: 0 }
-    }
-
-    const track = await this.prisma.track.findUnique({
-      where: { id: params.trackId },
+    const track = await this.prisma.track.findFirst({
+      where: { id: params.trackId, orgId: params.orgId },
     })
 
-    if (!track || (track.status as TrackStatus) !== 'ACTIVE') {
-      throw new BadRequestException('Trilha não está ativa (ACTIVE)')
+    if (!track || track.status !== 'ACTIVE') {
+      throw new BadRequestException('Trilha não ativa')
     }
 
-    // ⚠️ Aqui ainda falta validar orgId de verdade (Track não tem orgId no schema).
-    // Mantemos o filtro em Person pra não atribuir gente de outra org.
     const people = await this.prisma.person.findMany({
       where: {
         id: { in: params.personIds },
@@ -239,10 +160,6 @@ export class TracksService {
       select: { id: true },
     })
 
-    if (people.length === 0) {
-      return { assigned: 0 }
-    }
-
     const result = await this.prisma.assignment.createMany({
       data: people.map(p => ({
         personId: p.id,
@@ -251,38 +168,16 @@ export class TracksService {
       skipDuplicates: true,
     })
 
-    await this.audit.log({
-      action: 'TRACK_ASSIGNED',
-      context: `Atribuição em trilha "${track.title}" (slug=${track.slug} v${track.version}) | assigned=${result.count}`,
-    })
-
     return { assigned: result.count }
   }
 
-  async unassignPeople(trackId: string, personIds: string[]) {
-    if (!personIds || personIds.length === 0) {
-      return { unassigned: 0 }
-    }
-
-    const track = await this.prisma.track.findUnique({
-      where: { id: trackId },
+  async unassignPeople(trackId: string, personIds: string[], orgId: string) {
+    await this.prisma.track.findFirstOrThrow({
+      where: { id: trackId, orgId },
     })
 
-    if (!track || (track.status as TrackStatus) !== 'ACTIVE') {
-      throw new BadRequestException('Trilha não está ativa (ACTIVE)')
-    }
-
-    // Remover atribuições (isso é uma ação administrativa legítima)
     const result = await this.prisma.assignment.deleteMany({
-      where: {
-        trackId,
-        personId: { in: personIds },
-      },
-    })
-
-    await this.audit.log({
-      action: 'TRACK_UNASSIGNED',
-      context: `Remoção de atribuição em trilha "${track.title}" (slug=${track.slug} v${track.version}) | unassigned=${result.count}`,
+      where: { trackId, personId: { in: personIds } },
     })
 
     return { unassigned: result.count }

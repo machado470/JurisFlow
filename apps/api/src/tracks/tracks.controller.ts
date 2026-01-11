@@ -17,17 +17,17 @@ export class TracksController {
   constructor(private readonly tracks: TracksService) {}
 
   @Get()
-  async list(@Req() req: any) {
+  list(@Req() req: any) {
     return this.tracks.listForDashboard(req.user.orgId)
   }
 
   @Get(':id')
-  async get(@Param('id') id: string) {
-    return this.tracks.getById(id)
+  get(@Req() req: any, @Param('id') id: string) {
+    return this.tracks.getById(id, req.user.orgId)
   }
 
   @Post()
-  async create(@Req() req: any, @Body() body: any) {
+  create(@Req() req: any, @Body() body: any) {
     return this.tracks.create({
       title: body.title,
       description: body.description,
@@ -36,25 +36,22 @@ export class TracksController {
   }
 
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() body: { title?: string; description?: string },
-  ) {
-    return this.tracks.update(id, body)
+  update(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    return this.tracks.update(id, req.user.orgId, body)
   }
 
   @Post(':id/publish')
-  async publish(@Param('id') id: string) {
-    return this.tracks.publish(id)
+  publish(@Req() req: any, @Param('id') id: string) {
+    return this.tracks.publish(id, req.user.orgId)
   }
 
   @Post(':id/archive')
-  async archive(@Param('id') id: string) {
-    return this.tracks.archive(id)
+  archive(@Req() req: any, @Param('id') id: string) {
+    return this.tracks.archive(id, req.user.orgId)
   }
 
   @Post(':id/assign')
-  async assign(
+  assign(
     @Req() req: any,
     @Param('id') trackId: string,
     @Body() body: { personIds: string[] },
@@ -67,10 +64,15 @@ export class TracksController {
   }
 
   @Post(':id/unassign')
-  async unassign(
+  unassign(
+    @Req() req: any,
     @Param('id') trackId: string,
     @Body() body: { personIds: string[] },
   ) {
-    return this.tracks.unassignPeople(trackId, body.personIds ?? [])
+    return this.tracks.unassignPeople(
+      trackId,
+      body.personIds ?? [],
+      req.user.orgId,
+    )
   }
 }

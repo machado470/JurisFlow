@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common'
 import { PrismaModule } from '../prisma/prisma.module'
-import { AuditModule } from '../audit/audit.module'
-import { RiskModule } from '../risk/risk.module'
-import { PeopleModule } from '../people/people.module'
+import { TimelineModule } from '../timeline/timeline.module'
+import { OperationalStateModule } from '../people/operational-state.module'
 
 import { CorrectiveActionsService } from './corrective-actions.service'
 import { CorrectiveActionsController } from './corrective-actions.controller'
@@ -10,9 +9,8 @@ import { CorrectiveActionsController } from './corrective-actions.controller'
 @Module({
   imports: [
     PrismaModule,
-    AuditModule,
-    RiskModule,
-    PeopleModule,
+    TimelineModule,
+    OperationalStateModule,
   ],
   providers: [
     CorrectiveActionsService,

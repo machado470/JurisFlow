@@ -6,9 +6,7 @@ import {
 
 export function useExecutiveDashboard() {
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<ExecutiveReport | null>(
-    null,
-  )
+  const [data, setData] = useState<ExecutiveReport | null>(null)
 
   async function load() {
     setLoading(true)
@@ -32,18 +30,15 @@ export function useExecutiveDashboard() {
       data,
 
       peopleStats: data?.peopleStats ?? {
-        total: 0,
-        ok: 0,
-        warning: 0,
-        critical: 0,
+        OK: 0,
+        WARNING: 0,
+        CRITICAL: 0,
       },
 
       correctiveOpenCount:
         data?.correctiveOpenCount ?? 0,
 
-      tracks: data?.tracks ?? [],
       people: data?.people ?? [],
-      timeline: data?.timeline ?? [],
 
       reload: load,
     }),

@@ -1,76 +1,72 @@
 import { useEffect, useState } from 'react'
+
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
-import StatusBadge from '../../components/base/StatusBadge'
+
 import {
   getExecutiveReport,
-  type PersonAtRisk,
+  type ExecutiveReport,
 } from '../../services/reports'
-
-type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-function riskTone(risk: RiskLevel) {
-  if (risk === 'CRITICAL') return 'critical'
-  if (risk === 'HIGH') return 'warning'
-  if (risk === 'MEDIUM') return 'warning'
-  return 'success'
-}
 
 export default function Reports() {
   const [loading, setLoading] = useState(true)
-  const [people, setPeople] = useState<PersonAtRisk[]>([])
+  const [data, setData] =
+    useState<ExecutiveReport | null>(null)
 
   useEffect(() => {
     async function load() {
       try {
         const report = await getExecutiveReport()
-        setPeople(report.peopleAtRisk ?? [])
+        setData(report)
       } finally {
         setLoading(false)
       }
     }
+
     load()
   }, [])
 
+  if (loading) {
+    return (
+      <div className="text-sm opacity-60">
+        Carregando relatório…
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="text-sm opacity-60">
+        Nenhum dado disponível.
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       <PageHeader
-        title="Relatórios Executivos"
-        description="Visão consolidada de risco humano e conformidade."
+        title="Relatório Executivo"
+        description="Indicadores consolidados de risco e ações."
       />
 
       <Card>
-        <h3 className="font-medium mb-6">
-          Pessoas que exigem atenção
-        </h3>
-
-        {loading ? (
-          <div className="text-sm text-slate-400">
-            Carregando dados…
+        <div className="text-sm space-y-1">
+          <div>
+            Pessoas OK: {data.peopleStats.OK}
           </div>
-        ) : people.length === 0 ? (
-          <div className="text-sm text-slate-400">
-            Nenhuma pessoa em risco no momento.
+          <div>
+            Pessoas em atenção:{' '}
+            {data.peopleStats.WARNING}
           </div>
-        ) : (
-          <div className="space-y-2">
-            {people.map(p => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-lg px-4 py-3 hover:bg-white/5 transition"
-              >
-                <div>
-                  <div className="font-medium">{p.name}</div>
-                </div>
-
-                <StatusBadge
-                  label={p.risk}
-                  tone={riskTone(p.risk)}
-                />
-              </div>
-            ))}
+          <div>
+            Pessoas críticas:{' '}
+            {data.peopleStats.CRITICAL}
           </div>
-        )}
+          <div>
+            Ações corretivas abertas:{' '}
+            {data.correctiveOpenCount}
+          </div>
+        </div>
       </Card>
     </div>
   )

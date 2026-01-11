@@ -4,8 +4,10 @@ import * as bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  const passwordHash = await bcrypt.hash('demo', 10)
+
   // ----------------------------
-  // 🏢 ORGANIZATION
+  // ORGANIZATION
   // ----------------------------
   const org = await prisma.organization.upsert({
     where: { slug: 'demo-org' },
@@ -18,13 +20,14 @@ async function main() {
   })
 
   // ----------------------------
-  // 👤 ADMIN USER
+  // ADMIN USER
   // ----------------------------
-  const passwordHash = await bcrypt.hash('demo', 10)
-
   const user = await prisma.user.upsert({
     where: { email: 'admin@demo.com' },
-    update: {},
+    update: {
+      password: passwordHash,
+      active: true,
+    },
     create: {
       email: 'admin@demo.com',
       password: passwordHash,
@@ -35,58 +38,26 @@ async function main() {
   })
 
   // ----------------------------
-  // 🧍 PERSON (ADMIN)
+  // PERSON (SEPARADO, EXPLÍCITO)
   // ----------------------------
-  const person = await prisma.person.upsert({
+  await prisma.person.upsert({
     where: { userId: user.id },
     update: {},
     create: {
       name: 'Admin Demo',
       role: 'ADMIN',
-      userId: user.id,
+      active: true,
       orgId: org.id,
-      riskScore: 50,
+      userId: user.id,
     },
   })
 
-  // ----------------------------
-  // 📚 TRACK
-  // ----------------------------
-  const track = await prisma.track.upsert({
-    where: { slug: 'compliance-basico' },
-    update: {},
-    create: {
-      title: 'Compliance Básico',
-      slug: 'compliance-basico',
-      description: 'Trilha introdutória de compliance',
-    },
-  })
-
-  // ----------------------------
-  // 🔑 ASSIGNMENT
-  // ----------------------------
-  await prisma.assignment.upsert({
-    where: {
-      personId_trackId: {
-        personId: person.id,
-        trackId: track.id,
-      },
-    },
-    update: {},
-    create: {
-      personId: person.id,
-      trackId: track.id,
-      progress: 0,
-      risk: 'MEDIUM',
-    },
-  })
-
-  console.log('✅ Seed aplicado com sucesso')
+  console.log('✅ Seed aplicado com organização, usuário e pessoa válidos')
 }
 
 main()
-  .catch(err => {
-    console.error(err)
+  .catch(error => {
+    console.error(error)
     process.exit(1)
   })
   .finally(async () => {

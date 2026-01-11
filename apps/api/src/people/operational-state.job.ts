@@ -1,69 +1,60 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { OperationalStateService } from './operational-state.service'
-import { RiskService } from '../risk/risk.service'
-import { AuditService } from '../audit/audit.service'
+import { TimelineService } from '../timeline/timeline.service'
 
 @Injectable()
 export class OperationalStateJob {
-  private readonly logger = new Logger(
-    OperationalStateJob.name,
-  )
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly operationalState: OperationalStateService,
-    private readonly risk: RiskService,
-    private readonly audit: AuditService,
+    private readonly timeline: TimelineService,
   ) {}
 
-  /**
-   * ⏱ JOB REAL
-   * Deve ser executado periodicamente
-   */
   async run() {
-    const now = new Date()
+    const persons = await this.prisma.person.findMany({
+      where: { active: true },
+      select: { id: true },
+    })
 
-    // 1️⃣ Pessoas que tinham exceção e já expirou
-    const expiredExceptions =
-      await this.prisma.personException.findMany({
-        where: {
-          endsAt: { lt: now },
-          processedAt: null,
-        },
-        select: {
-          id: true,
-          personId: true,
-        },
-      })
+    for (const p of persons) {
+      const status = await this.operationalState.getStatus(p.id)
 
-    for (const ex of expiredExceptions) {
-      const state =
-        await this.operationalState.getState(
-          ex.personId,
-        )
+      // Se travou por risco temporal: criar corretiva institucional (idempotente)
+      const trigger = status?.metadata?.trigger
+      const level = status?.metadata?.level
 
-      // Marca exceção como processada (idempotência)
-      await this.prisma.personException.update({
-        where: { id: ex.id },
-        data: { processedAt: now },
-      })
+      const shouldCreate =
+        status.state === 'RESTRICTED' &&
+        trigger === 'TEMPORAL_RISK' &&
+        level === 'CRITICAL'
 
-      // Recalcula risco sempre
-      const score =
-        await this.risk.recalculatePersonRisk(
-          ex.personId,
-        )
+      if (shouldCreate) {
+        const exists = await this.prisma.correctiveAction.findFirst({
+          where: {
+            personId: p.id,
+            status: 'OPEN',
+            reason: 'Ação corretiva automática por risco temporal crítico',
+          },
+        })
 
-      await this.audit.log({
-        action: 'PERSON_EXCEPTION_ENDED',
-        personId: ex.personId,
-        context: `Exceção expirada. Estado atual: ${state}. Score: ${score}`,
-      })
+        if (!exists) {
+          await this.prisma.correctiveAction.create({
+            data: {
+              personId: p.id,
+              reason: 'Ação corretiva automática por risco temporal crítico',
+              status: 'OPEN',
+            },
+          })
 
-      this.logger.log(
-        `Exceção encerrada para ${ex.personId} | estado=${state} score=${score}`,
-      )
+          await this.timeline.log({
+            action: 'CORRECTIVE_ACTION_CREATED',
+            personId: p.id,
+            description: 'Criada automaticamente por risco temporal crítico',
+            metadata: { source: 'OPERATIONAL_STATE_JOB' },
+          })
+        }
+      }
     }
   }
 }

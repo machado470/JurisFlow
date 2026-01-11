@@ -59,6 +59,7 @@ model Organization {
 
   users   User[]
   persons Person[]
+  tracks  Track[]
 }
 
 model User {
@@ -118,13 +119,17 @@ model Track {
   version     Int         @default(1)
   status      TrackStatus @default(DRAFT)
 
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
+
   createdAt DateTime @default(now())
 
   assignments Assignment[]
   assessments Assessment[]
   items       TrackItem[]
 
-  @@unique([slug, version])
+  @@unique([slug, version, orgId])
+  @@index([orgId])
 }
 
 model TrackItem {
@@ -243,10 +248,14 @@ model AuditEvent {
   personId String?
   action   String
   context  String?
+  metadata Json?
 
   createdAt DateTime @default(now())
 
   person Person? @relation(fields: [personId], references: [id])
+
+  @@index([personId, createdAt])
+  @@index([action, createdAt])
 }
 
 model RiskSnapshot {

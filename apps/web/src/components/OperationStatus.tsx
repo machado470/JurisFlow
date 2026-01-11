@@ -1,24 +1,37 @@
 import { useAuth } from '../auth/AuthContext'
 
+type OperationConfig = {
+  label: string
+  color: string
+}
+
+const MAP: Record<
+  'NORMAL' | 'RESTRICTED' | 'SUSPENDED',
+  OperationConfig
+> = {
+  NORMAL: {
+    label: 'Operação normal',
+    color: 'text-emerald-400',
+  },
+  RESTRICTED: {
+    label: 'Operação restrita',
+    color: 'text-amber-400',
+  },
+  SUSPENDED: {
+    label: 'Operação suspensa',
+    color: 'text-rose-400',
+  },
+}
+
 export default function OperationStatus() {
   const { systemState } = useAuth()
 
-  const urgency = systemState?.urgency ?? 'NORMAL'
+  if (!systemState?.operational) {
+    return null
+  }
 
-  const config = {
-    NORMAL: {
-      label: 'Operação segura',
-      color: 'text-emerald-400',
-    },
-    WARNING: {
-      label: 'Atenção',
-      color: 'text-amber-400',
-    },
-    CRITICAL: {
-      label: 'Risco crítico',
-      color: 'text-rose-400',
-    },
-  }[urgency]
+  const state = systemState.operational.state
+  const config = MAP[state]
 
   return (
     <div
@@ -28,7 +41,7 @@ export default function OperationStatus() {
         ${config.color}
       `}
     >
-      {/* Shield icon */}
+      {/* Ícone de escudo */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="16"

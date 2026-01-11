@@ -1,38 +1,45 @@
-import type {
-  TimelineItem,
-  TimelineSeverity,
-  TimelineSource,
-} from '../../services/timeline'
+import type { AuditEvent } from '../../services/timeline'
 
 type Props = {
-  events: TimelineItem[]
+  events: AuditEvent[]
 }
 
-function severityTone(severity: TimelineSeverity) {
-  switch (severity) {
-    case 'CRITICAL':
-      return 'border-red-500 text-red-400'
-    case 'WARNING':
-      return 'border-yellow-500 text-yellow-400'
-    case 'SUCCESS':
-      return 'border-green-500 text-green-400'
-    default:
-      return 'border-slate-600 text-slate-300'
+function actionTone(action: string) {
+  if (action.includes('CRITICAL')) {
+    return 'border-rose-500/40 text-rose-400'
   }
-}
 
-function sourceLabel(source: TimelineSource) {
-  switch (source) {
-    case 'AUDIT':
-      return 'Decisão'
-    case 'RISK':
-      return 'Risco'
-    case 'EVENT':
-      return 'Evento'
+  if (action.includes('WARNING')) {
+    return 'border-amber-500/40 text-amber-400'
   }
+
+  if (
+    action.includes('CREATED') ||
+    action.includes('STARTED')
+  ) {
+    return 'border-blue-500/40 text-blue-400'
+  }
+
+  if (
+    action.includes('COMPLETED') ||
+    action.includes('RESOLVED')
+  ) {
+    return 'border-emerald-500/40 text-emerald-400'
+  }
+
+  return 'border-white/20 text-slate-300'
 }
 
-export default function EventTimeline({ events }: Props) {
+function humanizeAction(action: string) {
+  return action
+    .replaceAll('_', ' ')
+    .toLowerCase()
+    .replace(/^\w/, c => c.toUpperCase())
+}
+
+export default function EventTimeline({
+  events,
+}: Props) {
   if (!events || events.length === 0) {
     return (
       <div className="text-sm text-slate-400">
@@ -46,31 +53,34 @@ export default function EventTimeline({ events }: Props) {
       {events.map(e => (
         <div
           key={e.id}
-          className={`rounded-xl border px-4 py-3 ${severityTone(
-            e.severity,
-          )}`}
+          className={`
+            rounded-xl
+            border
+            px-4 py-3
+            ${actionTone(e.action)}
+          `}
         >
           <div className="flex items-center justify-between mb-1">
-            <div className="font-semibold">{e.title}</div>
-            <div className="text-xs opacity-70">
+            <div className="font-semibold text-sm">
+              {humanizeAction(e.action)}
+            </div>
+
+            <div className="text-xs opacity-60">
               {new Date(e.createdAt).toLocaleString()}
             </div>
           </div>
 
-          <div className="text-sm opacity-90">
-            {e.description}
-          </div>
-
-          {e.impact && (
-            <div className="mt-1 text-xs italic opacity-80">
-              Impacto: {e.impact}
+          {e.context && (
+            <div className="text-sm opacity-90">
+              {e.context}
             </div>
           )}
 
-          <div className="mt-2 text-xs opacity-60">
-            {sourceLabel(e.source)}
-            {e.personName ? ` • ${e.personName}` : ''}
-          </div>
+          {e.personName && (
+            <div className="mt-1 text-xs opacity-60">
+              {e.personName}
+            </div>
+          )}
         </div>
       ))}
     </div>

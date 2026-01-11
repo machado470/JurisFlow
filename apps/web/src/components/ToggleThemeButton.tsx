@@ -3,7 +3,8 @@ import { useTheme } from '../theme/useTheme'
 export default function ToggleThemeButton() {
   const { theme, toggleTheme } = useTheme()
 
-  const isLight = theme === 'light' || theme === 'blue'
+  // ✅ Tema claro = offwhite
+  const isLight = theme === 'offwhite'
 
   return (
     <button
@@ -17,7 +18,7 @@ export default function ToggleThemeButton() {
       "
     >
       {isLight ? (
-        // Moon icon (dark mode)
+        // Moon icon (modo escuro)
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"
@@ -32,7 +33,7 @@ export default function ToggleThemeButton() {
           <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
         </svg>
       ) : (
-        // Sun icon (light mode)
+        // Sun icon (modo claro)
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"

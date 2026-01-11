@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export default function InfoCard({
   icon,
@@ -22,7 +22,6 @@ export default function InfoCard({
         hover:border-white/20
       "
     >
-      {/* Glow direcional */}
       <div
         className="
           pointer-events-none
@@ -37,12 +36,14 @@ export default function InfoCard({
 
       <div className="relative z-10 flex flex-col gap-5">
         {icon && (
-          <div className="
-            w-12 h-12
-            text-blue-400
-            transition-transform duration-300
-            group-hover:scale-110
-          ">
+          <div
+            className="
+              w-12 h-12
+              text-blue-400
+              transition-transform duration-300
+              group-hover:scale-110
+            "
+          >
             {icon}
           </div>
         )}

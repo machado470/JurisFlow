@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react'
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
 import EventTimeline from '../../components/base/EventTimeline'
-import {
-  getPersonTimeline,
-} from '../../services/timeline'
-import type { TimelineItem } from '../../services/timeline'
+import { getPersonTimeline } from '../../services/timeline'
+import type { AuditEvent } from '../../services/timeline'
 import api from '../../services/api'
 
 type Person = {
@@ -17,7 +15,7 @@ export default function Audit() {
   const [people, setPeople] = useState<Person[]>([])
   const [selectedPerson, setSelectedPerson] =
     useState<string | null>(null)
-  const [events, setEvents] = useState<TimelineItem[]>([])
+  const [events, setEvents] = useState<AuditEvent[]>([])
   const [loading, setLoading] = useState(false)
 
   async function loadPeople() {
@@ -76,8 +74,7 @@ export default function Audit() {
 
         {!selectedPerson && (
           <div className="text-sm text-slate-400">
-            Selecione uma pessoa para visualizar a
-            auditoria completa.
+            Selecione uma pessoa para visualizar a auditoria completa.
           </div>
         )}
 

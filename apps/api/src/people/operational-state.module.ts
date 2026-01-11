@@ -1,34 +1,27 @@
 import { Module } from '@nestjs/common'
 import { PrismaModule } from '../prisma/prisma.module'
-import { AuditModule } from '../audit/audit.module'
 import { RiskModule } from '../risk/risk.module'
+import { TimelineModule } from '../timeline/timeline.module'
 
 import { OperationalStateService } from './operational-state.service'
 import { OperationalStateGuard } from './operational-state.guard'
-import { OperationalStateController } from './operational-state.controller'
-import { OperationalStateRunner } from './operational-state.runner'
-import { OperationalStateJob } from './operational-state.job'
+import { OperationalStateRepository } from './operational-state.repository'
 
 @Module({
   imports: [
     PrismaModule,
-    AuditModule,
     RiskModule,
+    TimelineModule,
   ],
   providers: [
     OperationalStateService,
+    OperationalStateRepository,
     OperationalStateGuard,
-    OperationalStateJob,
-    OperationalStateRunner,
-  ],
-  controllers: [
-    OperationalStateController,
+    // ❌ OperationalStateJob DESATIVADO
   ],
   exports: [
     OperationalStateService,
     OperationalStateGuard,
-    OperationalStateJob,
-    OperationalStateRunner,
   ],
 })
 export class OperationalStateModule {}

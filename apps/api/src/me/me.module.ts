@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common'
-import { PeopleModule } from '../people/people.module'
+import { PrismaModule } from '../prisma/prisma.module'
 import { AssignmentsModule } from '../assignments/assignments.module'
+import { OperationalStateModule } from '../people/operational-state.module'
 
 import { MeController } from './me.controller'
 
 @Module({
   imports: [
-    PeopleModule,
+    PrismaModule,
     AssignmentsModule,
+
+    // ✅ OBRIGATÓRIO — MeController usa OperationalStateService
+    OperationalStateModule,
   ],
   controllers: [
     MeController,

@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-
-type TimelineLogInput = {
-  action: string
-  personId?: string
-}
+import { presentAuditEvent } from './timeline.presenter'
 
 @Injectable()
 export class TimelineService {
@@ -12,38 +8,44 @@ export class TimelineService {
     private readonly prisma: PrismaService,
   ) {}
 
-  /**
-   * 📝 Registrar evento humano
-   */
-  async log(input: TimelineLogInput) {
+  async listByPerson(personId: string) {
+    const events = await this.prisma.auditEvent.findMany({
+      where: { personId },
+      include: {
+        person: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+
+    return events.map(presentAuditEvent)
+  }
+
+  async listGlobal() {
+    const events = await this.prisma.auditEvent.findMany({
+      include: {
+        person: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+
+    return events.map(presentAuditEvent)
+  }
+
+  async log(data: {
+    action: string
+    personId: string
+    description?: string
+    metadata?: any
+  }) {
     return this.prisma.auditEvent.create({
       data: {
-        action: input.action,
-        person: input.personId
-          ? { connect: { id: input.personId } }
-          : undefined,
+        action: data.action,
+        personId: data.personId,
+        context: data.description,
+        metadata: data.metadata,
       },
-    })
-  }
-
-  /**
-   * 👤 Timeline por pessoa
-   */
-  async listByPerson(personId: string) {
-    return this.prisma.auditEvent.findMany({
-      where: { personId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    })
-  }
-
-  /**
-   * 🌐 Timeline global
-   */
-  async listGlobal() {
-    return this.prisma.auditEvent.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 50,
     })
   }
 }
