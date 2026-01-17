@@ -1,35 +1,21 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Req,
-} from '@nestjs/common'
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { Controller, Get, Query, Req } from '@nestjs/common'
 import { ReportsService } from './reports.service'
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard)
 export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
   ) {}
 
-  /**
-   * 📸 FOTO EXECUTIVA
-   */
   @Get('executive')
-  async executive(@Req() req) {
+  async executive(@Req() req: any) {
     return this.reports.getExecutiveReport(
       req.user.orgId,
     )
   }
 
-  /**
-   * 📈 MÉTRICAS EXECUTIVAS
-   */
-  @Get('executive/metrics')
-  async executiveMetrics(
+  @Get('metrics')
+  async metrics(
     @Query('days') days?: string,
   ) {
     return this.reports.getExecutiveMetrics(

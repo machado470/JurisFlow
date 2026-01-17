@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { AssignmentFactoryService } from '../assignments/assignment-factory.service'
 
 function slugify(text: string) {
   return text
@@ -16,6 +17,7 @@ export class TracksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly assignmentFactory: AssignmentFactoryService,
   ) {}
 
   async listForDashboard(orgId: string) {
@@ -54,7 +56,11 @@ export class TracksService {
     })
   }
 
-  async create(params: { title: string; description?: string; orgId: string }) {
+  async create(params: {
+    title: string
+    description?: string
+    orgId: string
+  }) {
     const baseSlug = slugify(params.title)
 
     const lastVersion = await this.prisma.track.findFirst({
@@ -92,9 +98,13 @@ export class TracksService {
       where: { id, orgId },
     })
 
-    if (!track) throw new BadRequestException('Trilha não encontrada')
-    if (track.status !== 'DRAFT')
+    if (!track) {
+      throw new BadRequestException('Trilha não encontrada')
+    }
+
+    if (track.status !== 'DRAFT') {
       throw new BadRequestException('Somente DRAFT pode ser editada')
+    }
 
     return this.prisma.track.update({
       where: { id },
@@ -107,9 +117,9 @@ export class TracksService {
       where: { id, orgId },
     })
 
-    if (!track) throw new BadRequestException('Trilha não encontrada')
-    if (track.status !== 'DRAFT')
+    if (!track || track.status !== 'DRAFT') {
       throw new BadRequestException('Apenas DRAFT pode ser publicada')
+    }
 
     return this.prisma.track.update({
       where: { id },
@@ -122,19 +132,19 @@ export class TracksService {
       where: { id, orgId },
     })
 
-    if (!track) throw new BadRequestException('Trilha não encontrada')
-
-    const updated = await this.prisma.track.update({
-      where: { id },
-      data: { status: 'ARCHIVED' },
-    })
+    if (!track) {
+      throw new BadRequestException('Trilha não encontrada')
+    }
 
     await this.prisma.assignment.updateMany({
       where: { trackId: id, progress: { lt: 100 } },
       data: { progress: 100 },
     })
 
-    return updated
+    return this.prisma.track.update({
+      where: { id },
+      data: { status: 'ARCHIVED' },
+    })
   }
 
   async assignPeople(params: {
@@ -142,36 +152,14 @@ export class TracksService {
     personIds: string[]
     orgId: string
   }) {
-    const track = await this.prisma.track.findFirst({
-      where: { id: params.trackId, orgId: params.orgId },
-    })
-
-    if (!track || track.status !== 'ACTIVE') {
-      throw new BadRequestException('Trilha não ativa')
-    }
-
-    const people = await this.prisma.person.findMany({
-      where: {
-        id: { in: params.personIds },
-        orgId: params.orgId,
-        active: true,
-        role: 'COLLABORATOR',
-      },
-      select: { id: true },
-    })
-
-    const result = await this.prisma.assignment.createMany({
-      data: people.map(p => ({
-        personId: p.id,
-        trackId: params.trackId,
-      })),
-      skipDuplicates: true,
-    })
-
-    return { assigned: result.count }
+    return this.assignmentFactory.assignPeopleToTrack(params)
   }
 
-  async unassignPeople(trackId: string, personIds: string[], orgId: string) {
+  async unassignPeople(
+    trackId: string,
+    personIds: string[],
+    orgId: string,
+  ) {
     await this.prisma.track.findFirstOrThrow({
       where: { id: trackId, orgId },
     })

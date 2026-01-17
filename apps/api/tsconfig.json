@@ -1,28 +1,26 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2017",
+    "module": "CommonJS",
     "moduleResolution": "node",
+    "target": "ES2021",
+
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    "declaration": false,
+    "emitDeclarationOnly": false,
     "sourceMap": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
+
     "experimentalDecorators": true,
-    "strict": false,
-    "baseUrl": "./",
-    "outDir": "dist",
-    "rootDir": "src",
+    "emitDecoratorMetadata": true,
 
-    "types": [
-      "node",
-      "express",
-      "passport",
-      "passport-jwt",
-      "passport-local"
-    ],
-
+    "strict": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "incremental": false,
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "scripts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

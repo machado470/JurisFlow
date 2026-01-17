@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common'
 import { PrismaModule } from '../prisma/prisma.module'
-import { RiskModule } from '../risk/risk.module'
-import { OperationalStateModule } from './operational-state.module'
+import { AuditModule } from '../audit/audit.module'
+import { TimelineModule } from '../timeline/timeline.module'
+
+import { PeopleService } from './people.service'
+import { PeopleController } from './people.controller'
 
 @Module({
-  imports: [
-    PrismaModule,
-    RiskModule,
-    OperationalStateModule,
-  ],
+  imports: [PrismaModule, AuditModule, TimelineModule],
+  providers: [PeopleService],
+  controllers: [PeopleController],
+  exports: [PeopleService],
 })
 export class PeopleModule {}

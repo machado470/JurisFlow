@@ -7,5 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module'
   imports: [PrismaModule],
   controllers: [PendingController],
   providers: [PendingService],
+  exports: [PendingService], // 🔥 ESSENCIAL
 })
 export class PendingModule {}

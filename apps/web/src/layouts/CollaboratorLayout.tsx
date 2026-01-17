@@ -1,8 +1,10 @@
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useMe } from '../hooks/useMe'
 
 export default function CollaboratorLayout() {
-  const { logout, user } = useAuth()
+  const { logout } = useAuth()
+  const { me, loading } = useMe()
   const navigate = useNavigate()
 
   return (
@@ -14,7 +16,7 @@ export default function CollaboratorLayout() {
 
         <div className="flex items-center gap-4">
           <span className="text-sm opacity-70">
-            {user?.email}
+            {loading ? '—' : me?.email}
           </span>
 
           <button

@@ -8,26 +8,32 @@ import { EnforcementPolicyService } from './enforcement-policy.service'
 import { EnforcementEngineService } from './enforcement-engine.service'
 import { EnforcementJob } from './enforcement.job'
 import { EnforcementController } from './enforcement.controller'
+import { GovernanceRunService } from './governance-run.service'
+import { GovernanceReadService } from './governance-read.service'
+import { GovernanceReadController } from './governance-read.controller'
 
 @Module({
   imports: [
     PrismaModule,
     TimelineModule,
     AuditModule,
-
-    // precisa ler status operacional
     OperationalStateModule,
   ],
   providers: [
     EnforcementPolicyService,
     EnforcementEngineService,
     EnforcementJob,
+    GovernanceRunService,
+    GovernanceReadService,
   ],
   controllers: [
     EnforcementController,
+    GovernanceReadController,
   ],
   exports: [
     EnforcementEngineService,
+    GovernanceRunService,
+    GovernanceReadService,
   ],
 })
 export class GovernanceModule {}

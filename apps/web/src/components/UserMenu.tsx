@@ -1,9 +1,19 @@
 import { useTheme } from '../theme/useTheme'
-import { useAuth } from '../auth/AuthContext'
+import { useMe } from '../hooks/useMe'
 
 export default function UserMenu() {
   const { styles } = useTheme()
-  const { user } = useAuth()
+  const { me, loading } = useMe()
+
+  if (loading) {
+    return (
+      <div
+        className={`rounded-md p-3 text-sm ${styles.surface} ${styles.border}`}
+      >
+        Carregando…
+      </div>
+    )
+  }
 
   return (
     <div
@@ -14,10 +24,10 @@ export default function UserMenu() {
       `}
     >
       <div className="font-medium">
-        {user?.email ?? 'Usuário'}
+        {me?.email ?? 'Usuário'}
       </div>
       <div className="text-xs opacity-60">
-        {user?.role ?? '—'}
+        {me?.role ?? '—'}
       </div>
     </div>
   )

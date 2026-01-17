@@ -1,13 +1,18 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Inject } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { OperationalStateService } from './operational-state.service'
+import { TemporalRiskService } from '../risk/temporal-risk.service'
 import { TimelineService } from '../timeline/timeline.service'
 
 @Injectable()
 export class OperationalStateJob {
   constructor(
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
-    private readonly operationalState: OperationalStateService,
+
+    @Inject(TemporalRiskService)
+    private readonly temporalRisk: TemporalRiskService,
+
+    @Inject(TimelineService)
     private readonly timeline: TimelineService,
   ) {}
 
@@ -18,43 +23,28 @@ export class OperationalStateJob {
     })
 
     for (const p of persons) {
-      const status = await this.operationalState.getStatus(p.id)
+      const riskScore = await this.temporalRisk.calculate(p.id)
 
-      // Se travou por risco temporal: criar corretiva institucional (idempotente)
-      const trigger = status?.metadata?.trigger
-      const level = status?.metadata?.level
+      const state =
+        riskScore >= 90
+          ? 'SUSPENDED'
+          : riskScore >= 70
+          ? 'RESTRICTED'
+          : riskScore >= 50
+          ? 'WARNING'
+          : 'NORMAL'
 
-      const shouldCreate =
-        status.state === 'RESTRICTED' &&
-        trigger === 'TEMPORAL_RISK' &&
-        level === 'CRITICAL'
-
-      if (shouldCreate) {
-        const exists = await this.prisma.correctiveAction.findFirst({
-          where: {
-            personId: p.id,
-            status: 'OPEN',
-            reason: 'Ação corretiva automática por risco temporal crítico',
-          },
-        })
-
-        if (!exists) {
-          await this.prisma.correctiveAction.create({
-            data: {
-              personId: p.id,
-              reason: 'Ação corretiva automática por risco temporal crítico',
-              status: 'OPEN',
-            },
-          })
-
-          await this.timeline.log({
-            action: 'CORRECTIVE_ACTION_CREATED',
-            personId: p.id,
-            description: 'Criada automaticamente por risco temporal crítico',
-            metadata: { source: 'OPERATIONAL_STATE_JOB' },
-          })
-        }
-      }
+      // 🔍 SENSOR: apenas registra o estado calculado
+      await this.timeline.log({
+        action: 'OPERATIONAL_STATE_EVALUATED',
+        personId: p.id,
+        description: `Estado operacional recalculado: ${state}`,
+        metadata: {
+          riskScore,
+          state,
+          source: 'OPERATIONAL_STATE_JOB',
+        },
+      })
     }
   }
 }

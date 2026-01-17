@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
 import { createPerson } from '../../services/persons'
@@ -9,7 +10,8 @@ export default function PersonCreate() {
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<'ADMIN' | 'COLLABORATOR'>('COLLABORATOR')
+  const [role, setRole] =
+    useState<'ADMIN' | 'COLLABORATOR'>('COLLABORATOR')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,8 +21,13 @@ export default function PersonCreate() {
 
     try {
       setLoading(true)
-      await createPerson({ name, email, role })
-      navigate('/admin/people')
+      const person = await createPerson({
+        name,
+        email,
+        role,
+      })
+
+      navigate(`/admin/pessoas/${person.id}`)
     } catch {
       setError('Erro ao criar pessoa')
     } finally {
@@ -50,14 +57,24 @@ export default function PersonCreate() {
 
           <select
             value={role}
-            onChange={e => setRole(e.target.value as any)}
+            onChange={e =>
+              setRole(e.target.value as any)
+            }
             className="w-full rounded bg-slate-800 px-3 py-2 text-white"
           >
-            <option value="COLLABORATOR">Colaborador</option>
-            <option value="ADMIN">Administrador</option>
+            <option value="COLLABORATOR">
+              Colaborador
+            </option>
+            <option value="ADMIN">
+              Administrador
+            </option>
           </select>
 
-          {error && <div className="text-sm text-red-400">{error}</div>}
+          {error && (
+            <div className="text-sm text-red-400">
+              {error}
+            </div>
+          )}
 
           <button
             disabled={loading}

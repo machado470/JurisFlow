@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import PageHeader from '../../components/base/PageHeader'
 import Card from '../../components/base/Card'
@@ -7,31 +7,36 @@ import StatusBadge from '../../components/base/StatusBadge'
 
 import {
   getTrack,
-  updateTrack,
   publishTrack,
   archiveTrack,
-  unassignPeopleFromTrack,
   type TrackDetail,
 } from '../../services/tracks'
 
+import {
+  listTrackItems,
+  removeTrackItem,
+  type TrackItem,
+} from '../../services/trackItems'
+
 export default function TrackDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
 
   const [track, setTrack] = useState<TrackDetail | null>(null)
+  const [items, setItems] = useState<TrackItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [busy, setBusy] = useState(false)
 
   async function load() {
     if (!id) return
-    setLoading(true)
-    const data = await getTrack(id)
-    setTrack(data)
-    setTitle(data.title)
-    setDescription(data.description ?? '')
+
+    const [trackData, itemsData] =
+      await Promise.all([
+        getTrack(id),
+        listTrackItems(id),
+      ])
+
+    setTrack(trackData)
+    setItems(itemsData)
     setLoading(false)
   }
 
@@ -39,33 +44,37 @@ export default function TrackDetailPage() {
     load()
   }, [id])
 
-  async function handleSave() {
-    if (!track || track.status !== 'DRAFT') return
-    setSaving(true)
-    await updateTrack(track.id, { title, description })
-    await load()
-    setSaving(false)
+  function confirmAction(message: string) {
+    return window.confirm(message)
   }
 
   async function handlePublish() {
-    if (!track) return
-    await publishTrack(track.id)
+    if (!id || !track) return
+    if (!confirmAction('Publicar esta trilha?')) return
+
+    setBusy(true)
+    await publishTrack(id)
     await load()
+    setBusy(false)
   }
 
   async function handleArchive() {
-    if (!track) return
-    await archiveTrack(track.id)
+    if (!id || !track) return
+    if (!confirmAction('Arquivar esta trilha?')) return
+
+    setBusy(true)
+    await archiveTrack(id)
     await load()
+    setBusy(false)
   }
 
-  async function handleUnassign(personId: string) {
-    if (!track || track.status !== 'ACTIVE') return
-    await unassignPeopleFromTrack({
-      trackId: track.id,
-      personIds: [personId],
-    })
+  async function handleRemoveItem(itemId: string) {
+    if (!confirmAction('Remover este item?')) return
+
+    setBusy(true)
+    await removeTrackItem(itemId)
     await load()
+    setBusy(false)
   }
 
   if (loading || !track) {
@@ -77,127 +86,77 @@ export default function TrackDetailPage() {
   }
 
   const isDraft = track.status === 'DRAFT'
-  const isActive = track.status === 'ACTIVE'
+  const isArchived = track.status === 'ARCHIVED'
 
   return (
     <div className="space-y-8">
       <PageHeader
         title={track.title}
-        description={`v${track.version}`}
-        right={
-          <button
-            onClick={() => navigate('/admin/trilhas')}
-            className="text-sm opacity-60 hover:opacity-100"
-          >
-            Voltar
-          </button>
-        }
+        description={track.description ?? undefined}
       />
 
-      {/* STATUS */}
-      <Card className="flex items-center justify-between">
-        <div>
-          <div className="text-sm opacity-60">Status</div>
-          <StatusBadge
-            label={track.status}
-            tone={
-              track.status === 'ACTIVE'
-                ? 'success'
-                : track.status === 'DRAFT'
-                ? 'warning'
-                : 'neutral'
-            }
-          />
-        </div>
+      <Card>
+        <div className="flex items-center justify-between">
+          <StatusBadge label={track.status} />
 
-        <div className="flex gap-2">
-          {isDraft && (
-            <button
-              onClick={handlePublish}
-              className="rounded bg-emerald-500/10 px-3 py-1 text-sm text-emerald-400"
-            >
-              Publicar
-            </button>
-          )}
-
-          {isActive && (
-            <button
-              onClick={handleArchive}
-              className="rounded bg-rose-500/10 px-3 py-1 text-sm text-rose-400"
-            >
-              Arquivar
-            </button>
-          )}
-        </div>
-      </Card>
-
-      {/* EDIÇÃO */}
-      <Card className="space-y-3">
-        <div className="font-medium">
-          Dados da trilha
-        </div>
-
-        <input
-          disabled={!isDraft}
-          className="w-full rounded bg-white/10 px-3 py-2 text-sm disabled:opacity-40"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-        />
-
-        <textarea
-          disabled={!isDraft}
-          className="w-full rounded bg-white/10 px-3 py-2 text-sm disabled:opacity-40"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-        />
-
-        {isDraft && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
-          >
-            Salvar alterações
-          </button>
-        )}
-      </Card>
-
-      {/* ASSIGNMENTS */}
-      <Card className="space-y-3">
-        <div className="font-medium">
-          Pessoas atribuídas
-        </div>
-
-        {track.assignments.length === 0 && (
-          <div className="text-sm opacity-60">
-            Nenhuma pessoa atribuída
-          </div>
-        )}
-
-        {track.assignments.map(a => (
-          <div
-            key={a.id}
-            className="flex items-center justify-between text-sm"
-          >
-            <div>
-              {a.person?.name}
-              <div className="text-xs opacity-50">
-                Progresso: {a.progress}%
-              </div>
-            </div>
-
-            {isActive && (
+          <div className="flex gap-2">
+            {isDraft && (
               <button
-                onClick={() =>
-                  handleUnassign(a.personId)
-                }
-                className="text-xs text-rose-400 hover:underline"
+                disabled={busy}
+                onClick={handlePublish}
+                className="px-3 py-1 rounded bg-emerald-600 text-white"
               >
-                Remover
+                Publicar
+              </button>
+            )}
+
+            {!isArchived && (
+              <button
+                disabled={busy}
+                onClick={handleArchive}
+                className="px-3 py-1 rounded bg-rose-600 text-white"
+              >
+                Arquivar
               </button>
             )}
           </div>
-        ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="font-medium mb-3">
+          Itens da trilha
+        </div>
+
+        {items.length === 0 && (
+          <p className="text-sm opacity-60">
+            Nenhum item criado.
+          </p>
+        )}
+
+        <ul className="space-y-2 text-sm">
+          {items.map(i => (
+            <li
+              key={i.id}
+              className="flex items-center justify-between"
+            >
+              <span>
+                {i.order}. {i.title}
+              </span>
+
+              {isDraft && (
+                <button
+                  onClick={() =>
+                    handleRemoveItem(i.id)
+                  }
+                  className="text-xs px-2 py-1 rounded bg-rose-600 text-white"
+                >
+                  Remover
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       </Card>
     </div>
   )

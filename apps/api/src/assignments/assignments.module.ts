@@ -5,23 +5,24 @@ import { OperationalStateModule } from '../people/operational-state.module'
 
 import { AssignmentsService } from './assignments.service'
 import { AssignmentsController } from './assignments.controller'
+import { AssignmentFactoryService } from './assignment-factory.service'
 
 @Module({
   imports: [
     PrismaModule,
     TimelineModule,
-
-    // ✅ OBRIGATÓRIO — por causa do OperationalStateGuard
     OperationalStateModule,
   ],
   providers: [
     AssignmentsService,
+    AssignmentFactoryService,
   ],
   controllers: [
     AssignmentsController,
   ],
   exports: [
-    AssignmentsService,
+    AssignmentsService,          // 🔥 ESSENCIAL
+    AssignmentFactoryService,
   ],
 })
 export class AssignmentsModule {}

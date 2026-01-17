@@ -7,12 +7,12 @@ import { AuthModule } from './auth/auth.module'
 import { MeModule } from './me/me.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
 
-// núcleo de pessoas
-import { PersonsModule } from './persons/persons.module'
+// ✅ DOMÍNIO HUMANO ÚNICO
 import { PeopleModule } from './people/people.module'
 
 // domínio educacional
 import { TracksModule } from './tracks/tracks.module'
+import { TrackItemsModule } from './track-items/track-items.module'
 import { AssignmentsModule } from './assignments/assignments.module'
 import { AssessmentsModule } from './assessments/assessments.module'
 
@@ -49,10 +49,10 @@ import { GovernanceModule } from './governance/governance.module'
     MeModule,
     OnboardingModule,
 
-    PersonsModule,
     PeopleModule,
 
     TracksModule,
+    TrackItemsModule,
     AssignmentsModule,
     AssessmentsModule,
 

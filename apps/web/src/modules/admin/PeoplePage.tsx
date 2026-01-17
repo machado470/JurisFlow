@@ -39,6 +39,51 @@ export default function PeoplePage() {
     )
   }
 
+  /**
+   * 🔴 ESTADO VAZIO INSTITUCIONAL
+   * Sem pessoas = sem governança
+   */
+  if (people.length === 0) {
+    return (
+      <SectionBase>
+        <PageHeader
+          title="Pessoas"
+          description="Fila institucional de decisão."
+        />
+
+        <Card className="mt-10">
+          <div className="space-y-4 max-w-xl">
+            <div className="text-lg font-semibold">
+              Nenhuma pessoa cadastrada
+            </div>
+
+            <p className="text-sm opacity-70">
+              Sem pessoas, o sistema não consegue
+              aplicar trilhas, avaliar risco ou
+              exercer governança institucional.
+            </p>
+
+            <p className="text-sm opacity-70">
+              Cadastre a primeira pessoa para
+              iniciar o ciclo operacional.
+            </p>
+
+            <div className="pt-2">
+              <button
+                onClick={() =>
+                  navigate('/admin/pessoas/nova')
+                }
+                className="rounded bg-blue-600 px-4 py-2 text-sm text-white"
+              >
+                Cadastrar primeira pessoa
+              </button>
+            </div>
+          </div>
+        </Card>
+      </SectionBase>
+    )
+  }
+
   // 🔥 PRIORIDADE INSTITUCIONAL
   const ordered = [...people].sort((a, b) => {
     const weight = (s: PersonStatus) =>
@@ -58,7 +103,7 @@ export default function PeoplePage() {
         {ordered.map(p => (
           <Card
             key={p.id}
-            className="cursor-pointer hover:bg-white/10 transition"
+            variant="clickable"
             onClick={() =>
               navigate(`/admin/pessoas/${p.id}`)
             }
@@ -67,7 +112,7 @@ export default function PeoplePage() {
               <div>
                 <p className="font-medium">{p.name}</p>
                 <p className="text-sm text-slate-400">
-                  {p.department}
+                  {p.department ?? '—'}
                 </p>
               </div>
 
@@ -82,4 +127,3 @@ export default function PeoplePage() {
     </SectionBase>
   )
 }
-

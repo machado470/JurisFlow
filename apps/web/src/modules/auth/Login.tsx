@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
-import AuthLayout from './AuthLayout'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -17,40 +16,48 @@ export default function Login() {
     setError(null)
     setLoading(true)
 
-    const ok = await login(email, password)
+    const success = await login(email, password)
 
-    if (ok) {
-      navigate('/admin', { replace: true })
-    } else {
+    if (!success) {
       setError('Credenciais inválidas')
+      setLoading(false)
+      return
     }
 
-    setLoading(false)
+    /**
+     * ✅ LOGIN NÃO DECIDE ROTA
+     * Ele só autentica.
+     * A decisão é feita depois via /me.
+     */
+    navigate('/', { replace: true })
   }
 
   return (
-    <AuthLayout>
-      <h2 className="text-2xl font-semibold text-white mb-6">
-        Acessar sistema
-      </h2>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-sm space-y-4 p-6 rounded-xl bg-slate-900 border border-slate-800"
+      >
+        <h1 className="text-xl font-semibold text-center">
+          Acesso ao sistema
+        </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
+          placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          placeholder="Email"
+          className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700"
           required
-          className="w-full rounded-lg bg-white/5 px-4 py-3 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-blue-500"
         />
 
         <input
           type="password"
+          placeholder="Senha"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          placeholder="Senha"
+          className="w-full px-3 py-2 rounded bg-slate-800 border border-slate-700"
           required
-          className="w-full rounded-lg bg-white/5 px-4 py-3 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-blue-500"
         />
 
         {error && (
@@ -62,18 +69,11 @@ export default function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="
-            w-full rounded-lg
-            bg-blue-600 px-4 py-3
-            text-sm font-medium text-white
-            hover:bg-blue-500
-            transition
-            disabled:opacity-60
-          "
+          className="w-full py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
         >
           {loading ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
-    </AuthLayout>
+    </div>
   )
 }

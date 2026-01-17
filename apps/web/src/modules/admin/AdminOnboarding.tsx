@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import Card from '../../components/base/Card'
 import SectionBase from '../../components/layout/SectionBase'
 import api from '../../services/api'
-import { useAuth } from '../../auth/AuthContext'
 
 export default function AdminOnboarding() {
   const navigate = useNavigate()
-  const { refresh } = useAuth()
 
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,9 +27,11 @@ export default function AdminOnboarding() {
         name: name.trim(),
       })
 
-      // 🔑 FECHAMENTO DO CICLO
-      await refresh()
-
+      /**
+       * ✅ FECHAMENTO DO CICLO
+       * O backend já atualizou o estado.
+       * /me refletirá isso automaticamente.
+       */
       navigate('/admin', { replace: true })
     } catch (err: any) {
       setError(

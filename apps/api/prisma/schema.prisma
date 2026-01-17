@@ -101,14 +101,29 @@ model Person {
   assignments       Assignment[]
   assessments       Assessment[]
   correctiveActions CorrectiveAction[]
-  events            Event[]
   auditEvents       AuditEvent[]
+  timelineEvents    TimelineEvent[]
   riskSnapshots     RiskSnapshot[]
   exceptions        PersonException[]
   itemCompletions   TrackItemCompletion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TimelineEvent {
+  id          String   @id @default(uuid())
+  action      String
+  personId    String?
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  person Person? @relation(fields: [personId], references: [id])
+
+  @@index([personId, createdAt])
+  @@index([action, createdAt])
 }
 
 model Track {
@@ -230,19 +245,6 @@ model PersonException {
   @@index([endsAt, processedAt])
 }
 
-model Event {
-  id          String            @id @default(uuid())
-  personId    String
-  type        String
-  severity    TimelineSeverity
-  description String?
-  metadata    Json?
-
-  createdAt DateTime @default(now())
-
-  person Person @relation(fields: [personId], references: [id])
-}
-
 model AuditEvent {
   id       String   @id @default(uuid())
   personId String?
@@ -267,4 +269,16 @@ model RiskSnapshot {
   createdAt DateTime @default(now())
 
   person Person @relation(fields: [personId], references: [id])
+}
+
+model GovernanceRun {
+  id         String   @id @default(uuid())
+  evaluated  Int      @default(0)
+  warnings   Int      @default(0)
+  correctives Int     @default(0)
+  startedAt  DateTime
+  finishedAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }

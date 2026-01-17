@@ -2,18 +2,13 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ExecutiveMetricsService } from './executive-metrics.service'
 import { TimelineService } from '../timeline/timeline.service'
-import { OperationalStateService } from '../people/operational-state.service'
 
-type Urgency =
-  | 'OK'
-  | 'WARNING'
-  | 'CRITICAL'
+type Urgency = 'OK' | 'WARNING' | 'CRITICAL'
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly operationalState: OperationalStateService,
     private readonly metrics: ExecutiveMetricsService,
     private readonly timeline: TimelineService,
   ) {}
@@ -30,30 +25,28 @@ export class ReportsService {
       CRITICAL: 0,
     }
 
-    const peopleView: {
-      id: string
-      name: string
-      status: Urgency
-    }[] = []
+    const peopleView = []
 
     for (const p of people) {
-      const operational =
-        await this.operationalState.getStatus(p.id)
+      // 🔒 leitura segura: estado já persistido
+      const last = await this.prisma.auditEvent.findFirst({
+        where: {
+          personId: p.id,
+          action: 'OPERATIONAL_STATE_CHANGED',
+        },
+        orderBy: { createdAt: 'desc' },
+      })
 
       let status: Urgency = 'OK'
 
-      if (operational.state === 'WARNING') {
-        status = 'WARNING'
-      }
+      const state = (last?.metadata as any)?.state
 
-      if (
-        operational.state === 'RESTRICTED' ||
-        operational.state === 'SUSPENDED'
-      ) {
+      if (state === 'WARNING') status = 'WARNING'
+      if (state === 'RESTRICTED' || state === 'SUSPENDED')
         status = 'CRITICAL'
-      }
 
       peopleStats[status]++
+
       peopleView.push({
         id: p.id,
         name: p.name,
@@ -87,10 +80,8 @@ export class ReportsService {
               ) / count,
             )
 
-      let status:
-        | 'SUCCESS'
-        | 'WARNING'
-        | 'CRITICAL' = 'SUCCESS'
+      let status: 'SUCCESS' | 'WARNING' | 'CRITICAL' =
+        'SUCCESS'
 
       if (rate < 40) status = 'CRITICAL'
       else if (rate < 80) status = 'WARNING'
@@ -104,8 +95,7 @@ export class ReportsService {
       }
     })
 
-    const timeline =
-      await this.timeline.listGlobal()
+    const timeline = await this.timeline.listGlobal()
 
     return {
       peopleStats,

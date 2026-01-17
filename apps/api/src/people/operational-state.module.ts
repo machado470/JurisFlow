@@ -17,11 +17,10 @@ import { OperationalStateRepository } from './operational-state.repository'
     OperationalStateService,
     OperationalStateRepository,
     OperationalStateGuard,
-    // ❌ OperationalStateJob DESATIVADO
   ],
   exports: [
     OperationalStateService,
-    OperationalStateGuard,
+    OperationalStateGuard, // ✅ EXPORT EXPLÍCITO DO GUARD
   ],
 })
 export class OperationalStateModule {}

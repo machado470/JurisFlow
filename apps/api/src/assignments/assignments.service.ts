@@ -51,16 +51,139 @@ export class AssignmentsService {
     await this.timeline.log({
       action: 'ASSIGNMENT_STARTED',
       personId: assignment.personId,
+      description: 'Execução da trilha iniciada',
     })
 
     return updated
+  }
+
+  /**
+   * 🧠 PRÓXIMO ITEM DA TRILHA
+   */
+  async getNextItem(assignmentId: string) {
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        include: {
+          track: {
+            include: {
+              items: {
+                orderBy: { order: 'asc' },
+              },
+            },
+          },
+          completions: true,
+        },
+      })
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment não encontrado',
+      )
+    }
+
+    const completedItemIds = new Set(
+      assignment.completions.map(c => c.itemId),
+    )
+
+    return (
+      assignment.track.items.find(
+        item => !completedItemIds.has(item.id),
+      ) ?? null
+    )
+  }
+
+  /**
+   * ✅ CONCLUI ITEM DA TRILHA
+   */
+  async completeItem(
+    assignmentId: string,
+    itemId: string,
+  ) {
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        include: {
+          track: {
+            include: {
+              items: {
+                orderBy: { order: 'asc' },
+              },
+            },
+          },
+          completions: true,
+        },
+      })
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment não encontrado',
+      )
+    }
+
+    const completedItemIds = new Set(
+      assignment.completions.map(c => c.itemId),
+    )
+
+    if (completedItemIds.has(itemId)) {
+      throw new BadRequestException(
+        'Item já concluído',
+      )
+    }
+
+    const nextItem = assignment.track.items.find(
+      item => !completedItemIds.has(item.id),
+    )
+
+    if (!nextItem || nextItem.id !== itemId) {
+      throw new BadRequestException(
+        'Este item não é o próximo da trilha',
+      )
+    }
+
+    await this.prisma.trackItemCompletion.create({
+      data: {
+        itemId,
+        personId: assignment.personId,
+        assignmentId: assignment.id,
+      },
+    })
+
+    const totalItems = assignment.track.items.length
+    const completedCount = completedItemIds.size + 1
+
+    const progress = Math.round(
+      (completedCount / totalItems) * 100,
+    )
+
+    await this.prisma.assignment.update({
+      where: { id: assignment.id },
+      data: { progress },
+    })
+
+    await this.timeline.log({
+      action: 'TRACK_ITEM_COMPLETED',
+      personId: assignment.personId,
+      description: `Item concluído (${completedCount}/${totalItems})`,
+      metadata: {
+        assignmentId,
+        itemId,
+        progress,
+      },
+    })
+
+    return {
+      completed: true,
+      progress,
+      finished: completedCount === totalItems,
+    }
   }
 
   async updateProgress(
     assignmentId: string,
     progress: number,
   ) {
-    if (progress < 0 || progress > 100) {
+    if (progress < 0 || progress >= 100) {
       throw new BadRequestException(
         'Progresso inválido',
       )
@@ -77,6 +200,10 @@ export class AssignmentsService {
       )
     }
 
+    if (assignment.progress >= 100) {
+      return assignment
+    }
+
     const updated =
       await this.prisma.assignment.update({
         where: { id: assignmentId },
@@ -86,32 +213,7 @@ export class AssignmentsService {
     await this.timeline.log({
       action: 'ASSIGNMENT_PROGRESS_UPDATED',
       personId: assignment.personId,
-    })
-
-    return updated
-  }
-
-  async completeAssignment(assignmentId: string) {
-    const assignment =
-      await this.prisma.assignment.findUnique({
-        where: { id: assignmentId },
-      })
-
-    if (!assignment) {
-      throw new NotFoundException(
-        'Assignment não encontrado',
-      )
-    }
-
-    const updated =
-      await this.prisma.assignment.update({
-        where: { id: assignmentId },
-        data: { progress: 100 },
-      })
-
-    await this.timeline.log({
-      action: 'ASSIGNMENT_COMPLETED',
-      personId: assignment.personId,
+      metadata: { progress },
     })
 
     return updated

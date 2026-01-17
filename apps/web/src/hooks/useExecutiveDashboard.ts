@@ -1,47 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  getExecutiveReport,
-  type ExecutiveReport,
-} from '../services/reports'
+import { useEffect, useState } from 'react'
+import api from '../services/api'
+
+export type ExecutiveDashboard = {
+  people: {
+    total: number
+    normal: number
+    warning: number
+    restricted: number
+    suspended: number
+  }
+  risk: {
+    average: number
+  }
+  correctiveActions: {
+    open: number
+  }
+}
 
 export function useExecutiveDashboard() {
+  const [data, setData] =
+    useState<ExecutiveDashboard | null>(null)
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<ExecutiveReport | null>(null)
-
-  async function load() {
-    setLoading(true)
-    try {
-      const report = await getExecutiveReport()
-      setData(report)
-    } catch {
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   useEffect(() => {
-    load()
+    api
+      .get('/reports/executive')
+      .then(res => setData(res.data))
+      .finally(() => setLoading(false))
   }, [])
 
-  return useMemo(
-    () => ({
-      loading,
-      data,
-
-      peopleStats: data?.peopleStats ?? {
-        OK: 0,
-        WARNING: 0,
-        CRITICAL: 0,
-      },
-
-      correctiveOpenCount:
-        data?.correctiveOpenCount ?? 0,
-
-      people: data?.people ?? [],
-
-      reload: load,
-    }),
-    [loading, data],
-  )
+  return { data, loading }
 }

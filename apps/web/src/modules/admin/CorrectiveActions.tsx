@@ -9,17 +9,17 @@ import ConfirmDialog from '../../components/base/ConfirmDialog'
 import api from '../../services/api'
 import { useCorrectiveActions } from '../../hooks/useCorrectiveActions'
 import { usePersonDetail } from '../../hooks/usePersonDetail'
-import { useAuth } from '../../auth/AuthContext'
+import { useMe } from '../../hooks/useMe'
 
 export default function CorrectiveActions() {
   const { personId } = useParams<{ personId: string }>()
-  const { systemState } = useAuth()
+  const { me } = useMe()
 
   const { actions, loading, reload } =
     useCorrectiveActions(personId)
 
-  const { reload: reloadPerson } =
-    usePersonDetail(personId!)
+  const { loading: personLoading } =
+    usePersonDetail(personId)
 
   const [confirm, setConfirm] = useState<
     null | { id: string }
@@ -29,11 +29,11 @@ export default function CorrectiveActions() {
     useState(false)
 
   const operationalState =
-    systemState?.operational.state ?? 'NORMAL'
+    me?.operationalState?.state ?? 'NORMAL'
 
   const blocked = operationalState !== 'NORMAL'
 
-  if (loading) {
+  if (loading || personLoading) {
     return (
       <div className="text-sm opacity-60">
         Carregando ações corretivas…
@@ -55,7 +55,6 @@ export default function CorrectiveActions() {
       )
 
       await reload()
-      await reloadPerson()
     } finally {
       setActionLoading(false)
       setConfirm(null)

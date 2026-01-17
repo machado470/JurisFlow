@@ -7,8 +7,9 @@ export class PendingController {
     private readonly service: PendingService,
   ) {}
 
+  // ADMIN / ORG
   @Get(':orgId')
   list(@Param('orgId') orgId: string) {
-    return this.service.list(orgId)
+    return this.service.listByOrg(orgId)
   }
 }

@@ -1,150 +1,150 @@
-# STATUS — JURISFLOW / AUTOESCOLA-SIM
-📅 Congelamento: 2026-01-01  
-🚦 Estado geral: VERDE  
-🎯 Marco: CICLO OPERACIONAL COMPLETO
+# REGRA DO SISTEMA — JURISFLOW
+
+Este documento define as regras imutáveis do sistema.
+Nenhuma feature pode violar estas regras.
 
 ---
 
-## 🧠 VISÃO DO SISTEMA
+## 1. PRINCÍPIO CENTRAL
 
-Plataforma de **governança de treinamento, execução humana e risco**, com:
-- causalidade explícita
-- auditoria nativa
-- estado único confiável
-- separação clara entre decisão e execução
+O JurisFlow NÃO é um EAD.
+Ele é um sistema de governança da execução humana.
 
-Não é MVP descartável.  
-Não é dashboard decorativo.  
-É um **sistema operacional humano**.
+O sistema não mede intenção.
+Ele registra ação, consequência e risco.
 
 ---
 
-## 🔑 ARQUITETURA (DECISÕES CRÍTICAS)
+## 2. TRILHA (TRACK)
 
-### Fonte da Verdade
-- `/me` é a **única fonte de estado**
-- Front não inventa dados
-- Guards respeitam estado real
+A trilha é uma regra institucional.
 
-### Modelagem
-- `User` ≠ `Person`
-- Onboarding é **organizacional**, não por usuário
-- Assignments são a unidade mínima de execução
+- Pode existir em três estados:
+  - DRAFT: rascunho, editável
+  - ACTIVE: obrigação ativa
+  - ARCHIVED: encerrada, imutável
 
-### Governança
-- Ação → Assessment → Risk → Snapshot → Timeline
-- Tudo é explicável, auditável e rastreável
+- Uma trilha ACTIVE:
+  - Pode ser atribuída
+  - Não pode ser editada
+  - Produz risco real
 
 ---
 
-## 🔐 AUTENTICAÇÃO & ONBOARDING
+## 3. ITEM DA TRILHA (TRACK ITEM)
 
-- Login JWT funcional
-- Persistência em `localStorage`
-- Guards por papel (`ADMIN`, `COLLABORATOR`)
-- Onboarding **obrigatório e determinístico**
-- Nenhum bypass por URL
+Item é a menor unidade executável.
 
-Arquivos-chave:
-- `AuthContext`
-- `RequireAuth`
-- `RequireOnboarding`
-- `Onboarding.tsx`
+Tipos:
+- READING: leitura obrigatória
+- ACTION: ação humana externa
+- CHECKPOINT: confirmação consciente
 
----
-
-## 👑 FLUXO ADMIN (FECHADO)
-
-- Acesso protegido
-- Dashboard reage ao estado real
-- Visualiza:
-  - urgência operacional
-  - pendências
-  - **timeline de eventos reais**
-
-Admin não “confia”: **vê o que aconteceu**.
-
-Arquivos-chave:
-- `AdminDashboard.tsx`
-- `timeline.controller.ts`
+Regras:
+- Ordem é obrigatória
+- Item só pode ser criado/alterado em DRAFT
+- Não existe “pular item”
 
 ---
 
-## 👤 FLUXO COLABORADOR (FECHADO)
+## 4. ASSIGNMENT
 
-- Acesso protegido
-- Visualiza assignments reais
-- Executa atividades
-- Avança progresso
-- **Conclui com score**
-- Estado global é recalculado automaticamente
+Assignment é o vínculo entre pessoa e trilha.
 
-Arquivos-chave:
-- `CollaboratorDashboard.tsx`
-- `AssignmentExecution.tsx`
+- Representa responsabilidade, não tarefa
+- É criado apenas quando a trilha está ACTIVE
+- Um assignment por pessoa por trilha
 
----
-
-## 🔁 EXECUÇÃO & RISCO (FECHADO)
-
-Backend possui:
-- start
-- progress
-- complete
-- assessment
-- cálculo de risco
-- snapshot
-- evento de timeline
-
-Frontend:
-- chama endpoints corretos
-- revalida `/me`
-- redireciona conscientemente
-
-Nada fica implícito.
+Campos críticos:
+- progress: calculado pelo sistema
+- risk: consequência da avaliação
 
 ---
 
-## 🟢 ESTADO ATUAL
+## 5. EXECUÇÃO DA TRILHA
 
-- Auth: OK
-- Onboarding: OK
-- Admin flow: OK
-- Collaborator flow: OK
-- Execution: OK
-- Risk & Audit: OK
-- Timeline: OK
-- Visibilidade executiva mínima: OK
+A execução é linear e controlada pelo backend.
 
-👉 Sistema **operacional**.
+Regras:
+- O frontend nunca decide o próximo passo
+- O backend define o próximo item válido
+- Um item só pode ser concluído se for o próximo
 
----
-
-## 🚫 O QUE NÃO FAZER AGORA
-
-- Não mexer em schema
-- Não criar feature nova
-- Não otimizar UI
-- Não refatorar sem propósito
-
-Base está sólida.
+A verdade da execução é:
+TrackItemCompletion
 
 ---
 
-## 🔜 PRÓXIMOS CAMINHOS POSSÍVEIS
+## 6. PROGRESSO
 
-1. **ExecutiveDashboard agregado por organização**
-2. **Relatórios formais (risk, assessments, timeline)**
-3. **Empacotamento para demo / piloto**
-4. **Go-to-market**
+Progresso NÃO é input humano.
 
-Todos são evolução, não correção.
+- É calculado automaticamente:
+  itens concluídos / itens totais
+- Não pode ser alterado manualmente
+- Não pode retroceder
 
 ---
 
-## 🧊 CONCLUSÃO
+## 7. AVALIAÇÃO
 
-Este projeto atingiu um marco raro:
-**ciclo humano completo, observável e auditável**.
+Avaliação encerra a trilha.
 
-A partir daqui, toda decisão é estratégica.
+- Só ocorre após conclusão total
+- Gera:
+  - score
+  - risk educacional
+  - impacto no risco operacional
+
+---
+
+## 8. RISCO
+
+Risco é consequência, não opinião.
+
+Fontes de risco:
+- Avaliação
+- Inatividade
+- Ações corretivas abertas
+- Exceções humanas
+
+Risco afeta:
+- Estado operacional
+- Acesso à execução
+- Governança institucional
+
+---
+
+## 9. AÇÃO CORRETIVA
+
+Ação corretiva é criada automaticamente.
+
+- Nunca manual por padrão
+- Sempre auditada
+- Pode gerar reavaliação
+
+---
+
+## 10. AUDITORIA
+
+Tudo que importa gera evento.
+
+- Início de trilha
+- Conclusão de item
+- Avaliação
+- Mudança de estado
+- Ação corretiva
+
+Sem evento, não existe.
+
+---
+
+## 11. REGRA FINAL
+
+Nenhuma feature pode:
+- Burlar a ordem
+- Forçar progresso
+- Simular conclusão
+- Ocultar risco
+
+Se violar isso, está errada.

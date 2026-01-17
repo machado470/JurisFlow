@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common'
+
 import { PrismaModule } from '../prisma/prisma.module'
 import { AssignmentsModule } from '../assignments/assignments.module'
 import { OperationalStateModule } from '../people/operational-state.module'
+import { PendingModule } from '../pending/pending.module'
 
 import { MeController } from './me.controller'
 
@@ -9,12 +11,9 @@ import { MeController } from './me.controller'
   imports: [
     PrismaModule,
     AssignmentsModule,
-
-    // ✅ OBRIGATÓRIO — MeController usa OperationalStateService
     OperationalStateModule,
+    PendingModule, // 🔥 AGORA EXISTE NO CONTEXTO
   ],
-  controllers: [
-    MeController,
-  ],
+  controllers: [MeController],
 })
 export class MeModule {}

@@ -1,81 +1,81 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../services/api'
-import Card from '../../components/base/Card'
-import PageHeader from '../../components/base/PageHeader'
-import SectionBase from '../../components/layout/SectionBase'
-import ProgressBar from '../../components/base/ProgressBar'
 
-type Assignment = {
+import PageHeader from '../../components/base/PageHeader'
+import Card from '../../components/base/Card'
+import ProgressBar from '../../components/base/ProgressBar'
+import SectionBase from '../../components/layout/SectionBase'
+
+type TrackItem = {
   id: string
-  progress: number
-  track: {
-    id: string
-    title: string
-  }
+  title: string
+  content?: string | null
+  type: 'READING' | 'ACTION' | 'CHECKPOINT'
+  order: number
 }
 
 export default function AssignmentExecution() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const [assignment, setAssignment] = useState<Assignment | null>(null)
+  const [item, setItem] = useState<TrackItem | null>(null)
+  const [progress, setProgress] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  async function loadNext() {
+    if (!id) return
+
+    const { data } = await api.get(
+      `/assignments/${id}/next-item`,
+    )
+
+    if (!data) {
+      navigate('/collaborator')
+      return
+    }
+
+    setItem(data)
+    setLoading(false)
+  }
+
+  async function start() {
+    if (!id) return
+    await api.post(`/assignments/${id}/start`)
+    await loadNext()
+  }
+
+  async function completeItem() {
+    if (!id || !item) return
+
+    setBusy(true)
+
+    const { data } = await api.post(
+      `/assignments/${id}/complete-item`,
+      { itemId: item.id },
+    )
+
+    setProgress(data.progress)
+    setBusy(false)
+
+    if (data.finished) {
+      navigate('/collaborator')
+    } else {
+      await loadNext()
+    }
+  }
 
   useEffect(() => {
-    let mounted = true
-
-    // NÃO BUSCA /assignments/:id (inexistente)
-    // Assume que o usuário veio da lista válida e o id é suficiente
-    // Inicia execução diretamente
-    api
-      .post(`/assignments/${id}/start`)
-      .then(() => {
-        if (mounted) {
-          setAssignment(prev =>
-            prev
-              ? prev
-              : ({
-                  id: id!,
-                  progress: 0,
-                  track: { id: '', title: 'Atividade' },
-                } as Assignment),
-          )
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-
-    return () => {
-      mounted = false
-    }
+    start()
   }, [id])
 
-  function updateProgress(value: number) {
-    api
-      .patch(`/assignments/${id}/progress`, {
-        progress: value,
-      })
-      .then(() => {
-        setAssignment(a =>
-          a ? { ...a, progress: value } : a,
-        )
-      })
-  }
-
-  function complete() {
-    api.post(`/assignments/${id}/complete`).then(() => {
-      navigate('/collaborator')
-    })
-  }
-
-  if (loading || !assignment) {
+  if (loading || !item) {
     return (
       <SectionBase>
-        <PageHeader title="Execução" />
-        <p className="text-slate-400 mt-6">
-          Preparando atividade…
+        <PageHeader title="Execução da trilha" />
+        <p className="opacity-60 mt-6">
+          Preparando próximo passo…
         </p>
       </SectionBase>
     )
@@ -84,30 +84,41 @@ export default function AssignmentExecution() {
   return (
     <SectionBase>
       <PageHeader
-        title={assignment.track.title}
-        description="Execute a atividade e atualize seu progresso."
+        title={item.title}
+        description={`Etapa ${item.order}`}
       />
 
       <Card>
-        <ProgressBar value={assignment.progress} />
+        <ProgressBar value={progress} />
 
-        <div className="flex gap-3 mt-6">
-          <button
-            className="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700"
-            onClick={() =>
-              updateProgress(
-                Math.min(assignment.progress + 10, 100),
-              )
-            }
-          >
-            Avançar
-          </button>
+        <div className="mt-6 space-y-4">
+          {item.type === 'READING' && (
+            <div className="text-sm leading-relaxed opacity-80">
+              {item.content ??
+                'Conteúdo de leitura não informado.'}
+            </div>
+          )}
+
+          {item.type === 'ACTION' && (
+            <div className="text-sm opacity-80">
+              Execute a ação descrita e confirme
+              quando finalizar.
+            </div>
+          )}
+
+          {item.type === 'CHECKPOINT' && (
+            <div className="text-sm opacity-80">
+              Confirme que você compreendeu e
+              concluiu este ponto.
+            </div>
+          )}
 
           <button
-            className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500"
-            onClick={complete}
+            disabled={busy}
+            onClick={completeItem}
+            className="mt-4 px-4 py-2 rounded bg-emerald-600 text-white disabled:opacity-40"
           >
-            Concluir
+            Concluir etapa
           </button>
         </div>
       </Card>

@@ -3,13 +3,19 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Inject,
 } from '@nestjs/common'
 import { OperationalStateService } from './operational-state.service'
+import { TimelineService } from '../timeline/timeline.service'
 
 @Injectable()
 export class OperationalStateGuard implements CanActivate {
   constructor(
+    @Inject(OperationalStateService)
     private readonly operationalState: OperationalStateService,
+
+    @Inject(TimelineService)
+    private readonly timeline: TimelineService,
   ) {}
 
   async canActivate(
@@ -33,13 +39,24 @@ export class OperationalStateGuard implements CanActivate {
 
     // 🚫 SUSPENDED: nada passa
     if (status.state === 'SUSPENDED') {
+      await this.timeline.log({
+        action: 'OPERATIONAL_ACCESS_BLOCKED',
+        personId: user.personId,
+        description: 'Acesso bloqueado: usuário SUSPENDED',
+        metadata: {
+          state: status.state,
+          riskScore: status.riskScore,
+          method,
+          path,
+        },
+      })
+
       throw new ForbiddenException(
-        status.reason ??
-          'Usuário suspenso temporariamente.',
+        'Usuário suspenso temporariamente.',
       )
     }
 
-    // 🟡 WARNING: tudo passa (alerta já tratado no /me)
+    // 🟡 WARNING: tudo passa
     if (status.state === 'WARNING') {
       return true
     }
@@ -47,21 +64,28 @@ export class OperationalStateGuard implements CanActivate {
     // 🔴 RESTRICTED: só ações de regularização
     if (status.state === 'RESTRICTED') {
       const allowed =
-        // resolver ação corretiva
         (method === 'POST' &&
-          path.includes(
-            '/corrective-actions/',
-          )) ||
-        // reavaliação explícita
+          path.includes('/corrective-actions/')) ||
         (method === 'POST' &&
           path.includes('/reassess')) ||
-        // leitura básica
-        (method === 'GET')
+        method === 'GET'
 
       if (!allowed) {
+        await this.timeline.log({
+          action: 'OPERATIONAL_ACCESS_BLOCKED',
+          personId: user.personId,
+          description:
+            'Acesso bloqueado: usuário RESTRICTED',
+          metadata: {
+            state: status.state,
+            riskScore: status.riskScore,
+            method,
+            path,
+          },
+        })
+
         throw new ForbiddenException(
-          status.reason ??
-            'Ação bloqueada até regularização das pendências.',
+          'Ação bloqueada até regularização das pendências.',
         )
       }
 

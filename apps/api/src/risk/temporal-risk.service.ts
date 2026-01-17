@@ -1,144 +1,88 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Inject } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { PersonSuspensionService } from './person-suspension.service'
-import { TimelineService } from '../timeline/timeline.service'
-import { TemporalRiskRepository } from './temporal-risk.repository'
 
-export type TemporalRiskLevel =
-  | 'NORMAL'
-  | 'WARNING'
-  | 'CRITICAL'
+export type RiskContributor =
+  | 'LOW_AVG_PROGRESS'
+  | 'VERY_LOW_AVG_PROGRESS'
+  | 'HAS_OPEN_CORRECTIVES'
+  | 'HAS_MANY_OPEN_CORRECTIVES'
 
 export type TemporalRiskResult = {
-  level: TemporalRiskLevel
-  daysOpen: number
-  remainingDays?: number
-  limitDays?: number
-  recommendedAction?: string
+  score: number
+  factors: {
+    avgProgress: number
+    openCorrectives: number
+  }
+  contributors: RiskContributor[]
 }
 
 @Injectable()
 export class TemporalRiskService {
-  private readonly WARNING_DAYS = 7
-  private readonly CRITICAL_DAYS = 14
-
   constructor(
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
-    private readonly suspension: PersonSuspensionService,
-    private readonly timeline: TimelineService,
-    private readonly repo: TemporalRiskRepository,
   ) {}
 
-  async calculateUrgency(
+  async calculate(personId: string): Promise<number> {
+    const detailed = await this.calculateDetailed(personId)
+    return detailed.score
+  }
+
+  async calculateDetailed(
     personId: string,
   ): Promise<TemporalRiskResult> {
-    // 1️⃣ Suspensão anula risco temporal
-    const isSuspended =
-      await this.suspension.isSuspended(personId)
-
-    if (isSuspended) {
-      return {
-        level: 'NORMAL',
-        daysOpen: 0,
-      }
-    }
-
-    // 2️⃣ Assignments abertos
-    const assignments =
-      await this.prisma.assignment.findMany({
+    const openCorrectives =
+      await this.prisma.correctiveAction.count({
         where: {
           personId,
-          progress: { lt: 100 },
-        },
-        select: {
-          createdAt: true,
+          status: 'OPEN',
         },
       })
 
-    if (assignments.length === 0) {
-      return {
-        level: 'NORMAL',
-        daysOpen: 0,
-      }
-    }
-
-    const now = Date.now()
-    let maxDaysOpen = 0
-    let level: TemporalRiskLevel = 'NORMAL'
-
-    for (const a of assignments) {
-      const daysOpen =
-        (now - a.createdAt.getTime()) /
-        (1000 * 60 * 60 * 24)
-
-      maxDaysOpen = Math.max(maxDaysOpen, daysOpen)
-
-      if (daysOpen >= this.CRITICAL_DAYS) {
-        level = 'CRITICAL'
-        break
-      }
-
-      if (daysOpen >= this.WARNING_DAYS) {
-        level = 'WARNING'
-      }
-    }
-
-    const days = Math.floor(maxDaysOpen)
-
-    // 3️⃣ Logar mudança real (anti-spam)
-    const last =
-      await this.repo.getLastUrgency(personId)
-
-    if (level !== 'NORMAL' && level !== last) {
-      await this.timeline.log({
-        action: 'TEMPORAL_RISK_ESCALATED',
-        personId,
-        description:
-          level === 'CRITICAL'
-            ? 'Risco crítico por inatividade prolongada'
-            : 'Risco elevado por atraso em atividades',
-        metadata: {
-          level,
-          daysOpen: days,
-          limitDays:
-            level === 'CRITICAL'
-              ? this.CRITICAL_DAYS
-              : this.WARNING_DAYS,
-          remainingDays:
-            level === 'CRITICAL'
-              ? 0
-              : Math.max(
-                  0,
-                  this.CRITICAL_DAYS - days,
-                ),
-          recommendedAction:
-            'Concluir atividades pendentes para evitar bloqueio operacional',
-        },
+    const assignments =
+      await this.prisma.assignment.findMany({
+        where: { personId },
+        select: { progress: true },
       })
+
+    const avgProgress =
+      assignments.length === 0
+        ? 100
+        : assignments.reduce(
+            (s, a) => s + a.progress,
+            0,
+          ) / assignments.length
+
+    let score = 0
+    const contributors: RiskContributor[] = []
+
+    if (avgProgress < 80) {
+      score += 30
+      contributors.push('LOW_AVG_PROGRESS')
+    }
+
+    if (avgProgress < 50) {
+      score += 30
+      contributors.push('VERY_LOW_AVG_PROGRESS')
+    }
+
+    if (openCorrectives > 0) {
+      score += 20
+      contributors.push('HAS_OPEN_CORRECTIVES')
+    }
+
+    if (openCorrectives > 2) {
+      score += 20
+      contributors.push('HAS_MANY_OPEN_CORRECTIVES')
     }
 
     return {
-      level,
-      daysOpen: days,
-      limitDays:
-        level === 'NORMAL'
-          ? undefined
-          : level === 'CRITICAL'
-          ? this.CRITICAL_DAYS
-          : this.WARNING_DAYS,
-      remainingDays:
-        level === 'CRITICAL'
-          ? 0
-          : level === 'WARNING'
-          ? Math.max(
-              0,
-              this.CRITICAL_DAYS - days,
-            )
-          : undefined,
-      recommendedAction:
-        level === 'NORMAL'
-          ? undefined
-          : 'Concluir atividades pendentes para evitar bloqueio operacional',
+      score: Math.min(100, Math.round(score)),
+      factors: {
+        avgProgress: Math.round(avgProgress),
+        openCorrectives,
+      },
+      contributors,
     }
   }
 }

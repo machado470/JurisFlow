@@ -29,7 +29,7 @@ export class AssignmentsController {
   }
 
   /**
-   * ▶️ INÍCIO DE ASSIGNMENT
+   * ▶️ INICIAR ASSIGNMENT
    */
   @Post(':id/start')
   @UseGuards(OperationalStateGuard)
@@ -38,7 +38,31 @@ export class AssignmentsController {
   }
 
   /**
-   * 🔄 ATUALIZA PROGRESSO
+   * 🔎 PRÓXIMO ITEM DA TRILHA
+   */
+  @Get(':id/next-item')
+  @UseGuards(OperationalStateGuard)
+  async nextItem(@Param('id') id: string) {
+    return this.service.getNextItem(id)
+  }
+
+  /**
+   * ✅ CONCLUIR ITEM DA TRILHA
+   */
+  @Post(':id/complete-item')
+  @UseGuards(OperationalStateGuard)
+  async completeItem(
+    @Param('id') assignmentId: string,
+    @Body() body: { itemId: string },
+  ) {
+    return this.service.completeItem(
+      assignmentId,
+      body.itemId,
+    )
+  }
+
+  /**
+   * 🔄 PROGRESSO LEGADO
    */
   @Patch(':id/progress')
   @UseGuards(OperationalStateGuard)
@@ -47,14 +71,5 @@ export class AssignmentsController {
     @Body() body: { progress: number },
   ) {
     return this.service.updateProgress(id, body.progress)
-  }
-
-  /**
-   * ✅ CONCLUSÃO DE ASSIGNMENT
-   */
-  @Post(':id/complete')
-  @UseGuards(OperationalStateGuard)
-  async complete(@Param('id') id: string) {
-    return this.service.completeAssignment(id)
   }
 }

@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
+import { useMe } from '../../hooks/useMe'
 import { useTheme } from '../../theme/useTheme'
 
 import ToggleThemeButton from '../../components/ToggleThemeButton'
@@ -17,7 +18,8 @@ import UsersIcon from '../../components/icons/UsersIcon'
 import AuditIcon from '../../components/icons/AuditIcon'
 
 export default function AdminShell() {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
+  const { me, loading } = useMe()
   const { styles } = useTheme()
 
   const [open, setOpen] = useState(false)
@@ -129,7 +131,13 @@ export default function AdminShell() {
                 transition
               `}
             >
-              <Avatar name={user?.email} />
+              <Avatar
+                name={
+                  loading
+                    ? '—'
+                    : me?.email ?? 'Admin'
+                }
+              />
               <ChevronDownIcon className="w-4 h-4" />
             </button>
 
@@ -161,7 +169,7 @@ export default function AdminShell() {
           </div>
         </header>
 
-        {/* MAIN (CANVAS CORRIGIDO) */}
+        {/* MAIN */}
         <main
           className={`
             flex-1 p-6 lg:p-8

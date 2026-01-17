@@ -1,111 +1,44 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Inject } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import {
-  TemporalRiskService,
-  TemporalRiskResult,
-} from '../risk/temporal-risk.service'
-import { TimelineService } from '../timeline/timeline.service'
+import { TemporalRiskService } from '../risk/temporal-risk.service'
 import { OperationalStateRepository } from './operational-state.repository'
 
-export type OperationalState =
+export type OperationalStateValue =
   | 'NORMAL'
   | 'WARNING'
   | 'RESTRICTED'
   | 'SUSPENDED'
 
-export type OperationalStatus = {
-  state: OperationalState
-  reason?: string
-  metadata?: Record<string, any>
+export type OperationalState = {
+  state: OperationalStateValue
+  riskScore: number
 }
 
 @Injectable()
 export class OperationalStateService {
   constructor(
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
+
+    @Inject(TemporalRiskService)
     private readonly temporalRisk: TemporalRiskService,
-    private readonly timeline: TimelineService,
-    private readonly repo: OperationalStateRepository,
+
+    private readonly repository: OperationalStateRepository,
   ) {}
 
-  async getStatus(personId: string): Promise<OperationalStatus> {
-    const computed = await this.computeStatus(personId)
-    const last = await this.repo.getLastState(personId)
+  async getStatus(personId: string): Promise<OperationalState> {
+    const riskScore =
+      await this.temporalRisk.calculate(personId)
 
-    // 🔁 Log APENAS de transição de estado (anti-spam)
-    if (last !== computed.state) {
-      await this.timeline.log({
-        action: 'OPERATIONAL_STATE_CHANGED',
-        personId,
-        description: computed.reason,
-        metadata: {
-          from: last,
-          to: computed.state,
-          ...computed.metadata,
-        },
-      })
-    }
+    if (riskScore >= 90)
+      return { state: 'SUSPENDED', riskScore }
 
-    return computed
-  }
+    if (riskScore >= 70)
+      return { state: 'RESTRICTED', riskScore }
 
-  private async computeStatus(
-    personId: string,
-  ): Promise<OperationalStatus> {
-    // 1️⃣ RISCO TEMPORAL (FATO)
-    const temporal: TemporalRiskResult =
-      await this.temporalRisk.calculateUrgency(
-        personId,
-      )
+    if (riskScore >= 50)
+      return { state: 'WARNING', riskScore }
 
-    if (temporal.level === 'CRITICAL') {
-      return {
-        state: 'RESTRICTED',
-        reason:
-          'Risco crítico por inatividade prolongada',
-        metadata: {
-          trigger: 'TEMPORAL_RISK',
-          ...temporal,
-        },
-      }
-    }
-
-    if (temporal.level === 'WARNING') {
-      return {
-        state: 'WARNING',
-        reason:
-          'Risco elevado por atraso em atividades',
-        metadata: {
-          trigger: 'TEMPORAL_RISK',
-          ...temporal,
-        },
-      }
-    }
-
-    // 2️⃣ AÇÕES CORRETIVAS ABERTAS (FATO)
-    const openCorrectives =
-      await this.prisma.correctiveAction.count({
-        where: {
-          personId,
-          status: 'OPEN',
-        },
-      })
-
-    if (openCorrectives > 0) {
-      return {
-        state: 'RESTRICTED',
-        reason:
-          'Existem ações corretivas abertas pendentes',
-        metadata: {
-          trigger: 'OPEN_CORRECTIVE',
-          count: openCorrectives,
-        },
-      }
-    }
-
-    // 3️⃣ ESTADO NORMAL
-    return {
-      state: 'NORMAL',
-    }
+    return { state: 'NORMAL', riskScore }
   }
 }

@@ -26,24 +26,33 @@ export class CorrectiveActionsService {
 
     if (!action) return null
 
+    const resolvedAt = new Date()
+
     const resolved =
       await this.prisma.correctiveAction.update({
         where: { id },
         data: {
           status: 'DONE',
-          resolvedAt: new Date(),
+          resolvedAt,
         },
       })
 
-    // 🔄 Recalcular estado operacional
-    await this.operationalState.getStatus(
-      action.personId,
-    )
+    // 🔄 Reavaliar estado operacional (fonte única)
+    const newStatus =
+      await this.operationalState.getStatus(
+        action.personId,
+      )
 
+    // 🧾 Linha do tempo explicável
     await this.timeline.log({
       action: 'CORRECTIVE_ACTION_RESOLVED',
       personId: action.personId,
       description: action.reason,
+      metadata: {
+        resolvedAt,
+        resultingState: newStatus.state,
+        riskScore: newStatus.riskScore,
+      },
     })
 
     return resolved
@@ -51,9 +60,11 @@ export class CorrectiveActionsService {
 
   /**
    * 🔁 Compatibilidade explícita
-   * Usado por assessments / controllers antigos
+   * Usado por fluxos antigos / assessments
    */
-  async processReassessment(correctiveActionId: string) {
+  async processReassessment(
+    correctiveActionId: string,
+  ) {
     return this.resolve(correctiveActionId)
   }
 }
