@@ -7,6 +7,9 @@ import { AuthModule } from './auth/auth.module'
 import { MeModule } from './me/me.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
 
+// ✅ BOOTSTRAP (criar primeiro admin/org)
+import { BootstrapModule } from './bootstrap/bootstrap.module'
+
 // ✅ DOMÍNIO HUMANO ÚNICO
 import { PeopleModule } from './people/people.module'
 
@@ -45,6 +48,10 @@ import { GovernanceModule } from './governance/governance.module'
 
     PrismaModule,
     HealthModule,
+
+    // ✅ precisa estar cedo (rota pública)
+    BootstrapModule,
+
     AuthModule,
     MeModule,
     OnboardingModule,

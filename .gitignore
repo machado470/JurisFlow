@@ -1,13 +1,38 @@
+# Dependencies
 node_modules/
-.DS_Store
-dist/
 .pnpm-store/
+
+# Build
+dist/
+build/
+coverage/
+
+# Environment
 .env
+.env.*
+!.env.example
 
-node_modules/
+# OS
+.DS_Store
+Thumbs.db
 
+# Logs
+logs/
+*.log
 
-# Allow env examples
-!examples/env/*
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
 
+# Prisma
 /generated/prisma
+
+# Cache / Local auth / tokens
+.cache/
+*.token
+
+# Backup files
+*.bak
+

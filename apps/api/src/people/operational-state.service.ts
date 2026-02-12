@@ -1,6 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { TemporalRiskService } from '../risk/temporal-risk.service'
+import {
+  TemporalRiskService,
+  TemporalRiskResult,
+} from '../risk/temporal-risk.service'
 import { OperationalStateRepository } from './operational-state.repository'
 
 export type OperationalStateValue =
@@ -12,6 +15,11 @@ export type OperationalStateValue =
 export type OperationalState = {
   state: OperationalStateValue
   riskScore: number
+}
+
+export type OperationalStateDetailed = OperationalState & {
+  contributors: TemporalRiskResult['contributors']
+  factors: TemporalRiskResult['factors']
 }
 
 @Injectable()
@@ -26,19 +34,28 @@ export class OperationalStateService {
     private readonly repository: OperationalStateRepository,
   ) {}
 
+  private toState(riskScore: number): OperationalStateValue {
+    if (riskScore >= 90) return 'SUSPENDED'
+    if (riskScore >= 70) return 'RESTRICTED'
+    if (riskScore >= 50) return 'WARNING'
+    return 'NORMAL'
+  }
+
   async getStatus(personId: string): Promise<OperationalState> {
-    const riskScore =
-      await this.temporalRisk.calculate(personId)
+    const riskScore = await this.temporalRisk.calculate(personId)
+    return { state: this.toState(riskScore), riskScore }
+  }
 
-    if (riskScore >= 90)
-      return { state: 'SUSPENDED', riskScore }
+  async getStatusDetailed(
+    personId: string,
+  ): Promise<OperationalStateDetailed> {
+    const detailed = await this.temporalRisk.calculateDetailed(personId)
 
-    if (riskScore >= 70)
-      return { state: 'RESTRICTED', riskScore }
-
-    if (riskScore >= 50)
-      return { state: 'WARNING', riskScore }
-
-    return { state: 'NORMAL', riskScore }
+    return {
+      state: this.toState(detailed.score),
+      riskScore: detailed.score,
+      contributors: detailed.contributors,
+      factors: detailed.factors,
+    }
   }
 }

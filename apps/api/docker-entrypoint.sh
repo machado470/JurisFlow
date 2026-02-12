@@ -1,14 +1,29 @@
 #!/bin/sh
-set -euo pipefail
+set -e
 
-# Nenhuma migration automática deve rodar aqui.
-# O container sobe limpo e pronto.
+echo "🚀 API ONLINE NA PORTA 3000"
+echo "📁 Entrando no diretório da API"
 
-exec "$@"
-#!/bin/sh
-set -euo pipefail
+cd /app/apps/api
 
-# Nenhuma migration automática deve rodar aqui.
-# O container sobe limpo e pronto.
+echo "🔎 Prisma version:"
+pnpm prisma -v || true
 
-exec "$@"
+echo "🧱 Aplicando schema (db push)..."
+pnpm prisma db push
+
+SEED_MODE="${SEED_MODE:-demo}"
+
+if [ "$SEED_MODE" = "demo" ]; then
+  echo "🌱 Rodando seed (DEMO)..."
+  pnpm prisma db seed
+  echo "✅ Seed DEMO aplicado"
+elif [ "$SEED_MODE" = "none" ]; then
+  echo "🌱 Seed desativado (SEED_MODE=none)"
+else
+  echo "❌ SEED_MODE inválido: $SEED_MODE (use demo|none)"
+  exit 1
+fi
+
+echo "🚀 Iniciando API..."
+exec node dist/main.js

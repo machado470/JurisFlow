@@ -26,9 +26,10 @@ export class AssignmentFactoryService {
       throw new BadRequestException('Trilha não ativa')
     }
 
+    // Pega só pessoas válidas (COLLABORATOR + active + org)
     const people = await this.prisma.person.findMany({
       where: {
-        id: { in: params.personIds },
+        id: { in: params.personIds ?? [] },
         orgId: params.orgId,
         active: true,
         role: 'COLLABORATOR',
@@ -36,38 +37,67 @@ export class AssignmentFactoryService {
       select: { id: true },
     })
 
-    let created = 0
-
-    for (const person of people) {
-      const exists = await this.prisma.assignment.findFirst({
-        where: {
-          personId: person.id,
-          trackId: track.id,
-        },
-      })
-
-      if (exists) continue
-
-      await this.prisma.assignment.create({
-        data: {
-          personId: person.id,
-          trackId: track.id,
-          progress: 0,
-        },
-      })
-
-      await this.timeline.log({
-        action: 'ASSIGNMENT_CREATED',
-        personId: person.id,
-        description: `Trilha "${track.title}" atribuída`,
-        metadata: {
-          trackId: track.id,
-        },
-      })
-
-      created++
+    const personIds = people.map(p => p.id)
+    if (personIds.length === 0) {
+      return { assigned: 0 }
     }
 
-    return { assigned: created }
+    // Transação: descobre existentes + cria só os novos
+    const result = await this.prisma.$transaction(async tx => {
+      const existing = await tx.assignment.findMany({
+        where: {
+          trackId: track.id,
+          personId: { in: personIds },
+        },
+        select: { personId: true },
+      })
+
+      const existingSet = new Set(existing.map(e => e.personId))
+      const toCreate = personIds
+        .filter(pid => !existingSet.has(pid))
+        .map(pid => ({
+          personId: pid,
+          trackId: track.id,
+          progress: 0,
+        }))
+
+      if (toCreate.length === 0) {
+        return { createdIds: [] as string[], createdCount: 0 }
+      }
+
+      // createMany é rápido; skipDuplicates evita corrida
+      await tx.assignment.createMany({
+        data: toCreate,
+        skipDuplicates: true,
+      })
+
+      // Como createMany não retorna IDs, a gente reconsulta
+      const created = await tx.assignment.findMany({
+        where: {
+          trackId: track.id,
+          personId: { in: toCreate.map(x => x.personId) },
+        },
+        select: { personId: true },
+      })
+
+      return {
+        createdIds: created.map(c => c.personId),
+        createdCount: created.length,
+      }
+    })
+
+    // Timeline: só pra quem realmente foi atribuído agora
+    await Promise.all(
+      result.createdIds.map(personId =>
+        this.timeline.log({
+          action: 'ASSIGNMENT_CREATED',
+          personId,
+          description: `Trilha "${track.title}" atribuída`,
+          metadata: { trackId: track.id },
+        }),
+      ),
+    )
+
+    return { assigned: result.createdCount }
   }
 }

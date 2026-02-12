@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { TimelineService } from '../timeline/timeline.service'
 import { OperationalStateService } from '../people/operational-state.service'
+import { RiskService } from '../risk/risk.service'
 
 @Injectable()
 export class CorrectiveActionsService {
@@ -9,6 +10,7 @@ export class CorrectiveActionsService {
     private readonly prisma: PrismaService,
     private readonly timeline: TimelineService,
     private readonly operationalState: OperationalStateService,
+    private readonly risk: RiskService,
   ) {}
 
   async listByPerson(personId: string) {
@@ -19,31 +21,32 @@ export class CorrectiveActionsService {
   }
 
   async resolve(id: string) {
-    const action =
-      await this.prisma.correctiveAction.findUnique({
-        where: { id },
-      })
+    const action = await this.prisma.correctiveAction.findUnique({
+      where: { id },
+    })
 
     if (!action) return null
 
     const resolvedAt = new Date()
 
-    const resolved =
-      await this.prisma.correctiveAction.update({
-        where: { id },
-        data: {
-          status: 'DONE',
-          resolvedAt,
-        },
-      })
+    const resolved = await this.prisma.correctiveAction.update({
+      where: { id },
+      data: {
+        status: 'DONE',
+        resolvedAt,
+      },
+    })
+
+    // ✅ Recalcula risco operacional (persiste Person.riskScore + RiskSnapshot + Timeline snapshot)
+    const recalculatedScore = await this.risk.recalculatePersonRisk(
+      action.personId,
+      `Corretiva resolvida (${action.reason})`,
+    )
 
     // 🔄 Reavaliar estado operacional (fonte única)
-    const newStatus =
-      await this.operationalState.getStatus(
-        action.personId,
-      )
+    const newStatus = await this.operationalState.getStatus(action.personId)
 
-    // 🧾 Linha do tempo explicável
+    // 🧾 Linha do tempo explicável (fechamento da corretiva)
     await this.timeline.log({
       action: 'CORRECTIVE_ACTION_RESOLVED',
       personId: action.personId,
@@ -52,6 +55,7 @@ export class CorrectiveActionsService {
         resolvedAt,
         resultingState: newStatus.state,
         riskScore: newStatus.riskScore,
+        recalculatedScore,
       },
     })
 
@@ -59,12 +63,27 @@ export class CorrectiveActionsService {
   }
 
   /**
-   * 🔁 Compatibilidade explícita
-   * Usado por fluxos antigos / assessments
+   * 🔁 Compatibilidade explícita (personId)
+   * - Usado pelo endpoint /corrective-actions/person/:personId/reassess
+   * - Resolve a última ação corretiva OPEN daquela pessoa (se existir)
    */
-  async processReassessment(
-    correctiveActionId: string,
-  ) {
-    return this.resolve(correctiveActionId)
+  async processReassessment(personId: string) {
+    const lastOpen = await this.prisma.correctiveAction.findFirst({
+      where: {
+        personId,
+        status: 'OPEN',
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    })
+
+    if (!lastOpen) return { reassessed: true, resolved: false }
+
+    const resolved = await this.resolve(lastOpen.id)
+    return {
+      reassessed: true,
+      resolved: !!resolved,
+      correctiveActionId: lastOpen.id,
+    }
   }
 }

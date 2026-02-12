@@ -18,9 +18,7 @@ export class OperationalStateGuard implements CanActivate {
     private readonly timeline: TimelineService,
   ) {}
 
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest()
     const user = req.user
 
@@ -29,13 +27,10 @@ export class OperationalStateGuard implements CanActivate {
       return true
     }
 
-    const status =
-      await this.operationalState.getStatus(
-        user.personId,
-      )
+    const status = await this.operationalState.getStatus(user.personId)
 
     const method = req.method
-    const path: string = req.route?.path ?? ''
+    const url: string = req.originalUrl ?? req.url ?? ''
 
     // 🚫 SUSPENDED: nada passa
     if (status.state === 'SUSPENDED') {
@@ -47,13 +42,11 @@ export class OperationalStateGuard implements CanActivate {
           state: status.state,
           riskScore: status.riskScore,
           method,
-          path,
+          url,
         },
       })
 
-      throw new ForbiddenException(
-        'Usuário suspenso temporariamente.',
-      )
+      throw new ForbiddenException('Usuário suspenso temporariamente.')
     }
 
     // 🟡 WARNING: tudo passa
@@ -61,26 +54,28 @@ export class OperationalStateGuard implements CanActivate {
       return true
     }
 
-    // 🔴 RESTRICTED: só ações de regularização
+    // 🔴 RESTRICTED: só ações de regularização + leitura
     if (status.state === 'RESTRICTED') {
-      const allowed =
-        (method === 'POST' &&
-          path.includes('/corrective-actions/')) ||
-        (method === 'POST' &&
-          path.includes('/reassess')) ||
-        method === 'GET'
+      const isGet = method === 'GET'
+
+      const isCorrectivePost =
+        method === 'POST' &&
+        (url.includes('/corrective-actions/') || url.includes('/corrective-actions'))
+
+      const isReassessPost = method === 'POST' && url.includes('/reassess')
+
+      const allowed = isGet || isCorrectivePost || isReassessPost
 
       if (!allowed) {
         await this.timeline.log({
           action: 'OPERATIONAL_ACCESS_BLOCKED',
           personId: user.personId,
-          description:
-            'Acesso bloqueado: usuário RESTRICTED',
+          description: 'Acesso bloqueado: usuário RESTRICTED',
           metadata: {
             state: status.state,
             riskScore: status.riskScore,
             method,
-            path,
+            url,
           },
         })
 

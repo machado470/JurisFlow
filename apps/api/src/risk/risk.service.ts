@@ -9,21 +9,34 @@ export class RiskService {
     private readonly temporalRisk: TemporalRiskService,
   ) {}
 
-  async recalculatePersonRisk(personId: string) {
-    const score =
-      await this.temporalRisk.calculate(personId)
+  /**
+   * Recalcula risco operacional (agregado) e persiste:
+   * - Person.riskScore (cache)
+   * - RiskSnapshot (histórico)
+   * - TimelineEvent RISK_SNAPSHOT_CREATED (trilha explicável)
+   */
+  async recalculatePersonRisk(personId: string, reason?: string) {
+    const score = await this.temporalRisk.calculate(personId)
 
-    await this.snapshot(personId, score)
+    // ✅ cache persistido (dashboard, ordenação, filtros, etc)
+    await this.prisma.person.update({
+      where: { id: personId },
+      data: { riskScore: score },
+    })
+
+    await this.snapshot(personId, score, reason)
 
     return score
   }
 
-  async snapshot(personId: string, score: number) {
+  async snapshot(personId: string, score: number, reason?: string) {
+    const finalReason = reason?.trim() ? reason.trim() : 'Reavaliação automática'
+
     await this.prisma.riskSnapshot.create({
       data: {
         personId,
         score,
-        reason: 'Reavaliação automática',
+        reason: finalReason,
       },
     })
 
@@ -31,7 +44,7 @@ export class RiskService {
       data: {
         personId,
         action: 'RISK_SNAPSHOT_CREATED',
-        metadata: { score },
+        metadata: { score, reason: finalReason },
       },
     })
   }

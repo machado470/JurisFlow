@@ -4,6 +4,7 @@ import { RiskModule } from '../risk/risk.module'
 import { AuditModule } from '../audit/audit.module'
 import { CorrectiveActionsModule } from '../corrective-actions/corrective-actions.module'
 import { OperationalStateModule } from '../people/operational-state.module'
+import { TimelineModule } from '../timeline/timeline.module'
 
 import { AssessmentsService } from './assessments.service'
 import { AssessmentsController } from './assessments.controller'
@@ -15,8 +16,9 @@ import { AssessmentsController } from './assessments.controller'
     AuditModule,
     CorrectiveActionsModule,
 
-    // ✅ OBRIGATÓRIO — Assessments usa OperationalStateGuard
+    // ✅ Guard + dependência indireta (TimelineService)
     OperationalStateModule,
+    TimelineModule,
   ],
   providers: [
     AssessmentsService,

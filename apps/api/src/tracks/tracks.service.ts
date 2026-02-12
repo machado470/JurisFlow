@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { AssignmentFactoryService } from '../assignments/assignment-factory.service'
@@ -39,8 +43,10 @@ export class TracksService {
         id: t.id,
         title: t.title,
         description: t.description,
+        slug: t.slug, // ✅ necessário pro publish-latest
         status: t.status,
         version: t.version,
+        createdAt: t.createdAt, // ✅ útil pra debug/ordenar/inspecionar
         peopleCount: total,
         completionRate,
       }
@@ -99,7 +105,7 @@ export class TracksService {
     })
 
     if (!track) {
-      throw new BadRequestException('Trilha não encontrada')
+      throw new NotFoundException('Trilha não encontrada')
     }
 
     if (track.status !== 'DRAFT') {
@@ -112,19 +118,94 @@ export class TracksService {
     })
   }
 
+  /**
+   * ✅ Regra de domínio: item sempre entra com nextOrder = max(order)+1
+   * - só pode mexer em TrackItem se a Track estiver em DRAFT
+   */
+  async addItem(params: {
+    trackId: string
+    orgId: string
+    type: any // (ideal: TrackItemType do Prisma, mas deixo flexível aqui)
+    title: string
+    content: string
+  }) {
+    const track = await this.prisma.track.findFirst({
+      where: { id: params.trackId, orgId: params.orgId },
+      select: { id: true, title: true, status: true, version: true },
+    })
+
+    if (!track) throw new NotFoundException('Trilha não encontrada')
+
+    if (track.status !== 'DRAFT') {
+      throw new BadRequestException('Somente DRAFT pode receber itens')
+    }
+
+    if (!params.title?.trim()) {
+      throw new BadRequestException('Título do item é obrigatório')
+    }
+
+    const created = await this.prisma.$transaction(async tx => {
+      const agg = await tx.trackItem.aggregate({
+        where: { trackId: params.trackId },
+        _max: { order: true },
+      })
+
+      const nextOrder = (agg._max.order ?? 0) + 1
+
+      // unique(trackId, order) já existe e protege concorrência
+      return tx.trackItem.create({
+        data: {
+          trackId: params.trackId,
+          order: nextOrder,
+          type: params.type,
+          title: params.title.trim(),
+          content: params.content ?? '',
+        },
+      })
+    })
+
+    await this.audit.log({
+      action: 'TRACK_ITEM_CREATED',
+      context: `Track "${track.title}" v${track.version} -> item #${created.order} "${created.title}"`,
+    })
+
+    return created
+  }
+
   async publish(id: string, orgId: string) {
     const track = await this.prisma.track.findFirst({
       where: { id, orgId },
     })
 
-    if (!track || track.status !== 'DRAFT') {
+    if (!track) {
+      throw new NotFoundException('Trilha não encontrada')
+    }
+
+    if (track.status !== 'DRAFT') {
       throw new BadRequestException('Apenas DRAFT pode ser publicada')
     }
 
-    return this.prisma.track.update({
+    const itemsCount = await this.prisma.trackItem.count({
+      where: { trackId: id },
+    })
+
+    if (itemsCount === 0) {
+      throw new BadRequestException(
+        'Não é possível publicar uma trilha sem itens',
+      )
+    }
+
+    const updated = await this.prisma.track.update({
       where: { id },
       data: { status: 'ACTIVE' },
     })
+
+    await this.audit.log({
+      action: 'TRACK_PUBLISHED',
+      context: `Track "${updated.title}" v${updated.version}`,
+    })
+
+    return updated
   }
 
   async archive(id: string, orgId: string) {
@@ -133,7 +214,7 @@ export class TracksService {
     })
 
     if (!track) {
-      throw new BadRequestException('Trilha não encontrada')
+      throw new NotFoundException('Trilha não encontrada')
     }
 
     await this.prisma.assignment.updateMany({
@@ -141,10 +222,17 @@ export class TracksService {
       data: { progress: 100 },
     })
 
-    return this.prisma.track.update({
+    const updated = await this.prisma.track.update({
       where: { id },
       data: { status: 'ARCHIVED' },
     })
+
+    await this.audit.log({
+      action: 'TRACK_ARCHIVED',
+      context: `Track "${updated.title}" v${updated.version}`,
+    })
+
+    return updated
   }
 
   async assignPeople(params: {

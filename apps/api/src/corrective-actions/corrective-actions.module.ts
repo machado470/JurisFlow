@@ -1,25 +1,14 @@
 import { Module } from '@nestjs/common'
-import { PrismaModule } from '../prisma/prisma.module'
+import { CorrectiveActionsController } from './corrective-actions.controller'
+import { CorrectiveActionsService } from './corrective-actions.service'
 import { TimelineModule } from '../timeline/timeline.module'
 import { OperationalStateModule } from '../people/operational-state.module'
-
-import { CorrectiveActionsService } from './corrective-actions.service'
-import { CorrectiveActionsController } from './corrective-actions.controller'
+import { RiskModule } from '../risk/risk.module'
 
 @Module({
-  imports: [
-    PrismaModule,
-    TimelineModule,
-    OperationalStateModule,
-  ],
-  providers: [
-    CorrectiveActionsService,
-  ],
-  controllers: [
-    CorrectiveActionsController,
-  ],
-  exports: [
-    CorrectiveActionsService,
-  ],
+  imports: [TimelineModule, OperationalStateModule, RiskModule],
+  controllers: [CorrectiveActionsController],
+  providers: [CorrectiveActionsService],
+  exports: [CorrectiveActionsService],
 })
 export class CorrectiveActionsModule {}

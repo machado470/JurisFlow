@@ -1,15 +1,11 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 })
 
-/**
- * REQUEST
- * Injeta token em todas as requisições
- */
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('access_token')
 
   if (token) {
     config.headers = config.headers ?? {}
@@ -19,18 +15,13 @@ api.interceptors.request.use(config => {
   return config
 })
 
-/**
- * RESPONSE
- * Só derruba sessão se o token já existia
- * Evita matar login em estado transitório
- */
 api.interceptors.response.use(
   response => response,
   error => {
-    const hadToken = !!localStorage.getItem('token')
+    const hadToken = !!localStorage.getItem('access_token')
 
     if (error.response?.status === 401 && hadToken) {
-      localStorage.removeItem('token')
+      localStorage.removeItem('access_token')
       window.location.href = '/login'
     }
 

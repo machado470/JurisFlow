@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common'
@@ -22,9 +21,7 @@ export class AssignmentsController {
    * 📋 LISTAGEM POR PESSOA
    */
   @Get('person/:personId')
-  async listByPerson(
-    @Param('personId') personId: string,
-  ) {
+  async listByPerson(@Param('personId') personId: string) {
     return this.service.listOpenByPerson(personId)
   }
 
@@ -62,14 +59,12 @@ export class AssignmentsController {
   }
 
   /**
-   * 🔄 PROGRESSO LEGADO
+   * 🛠️ REBUILD PROGRESS
+   * Sincroniza Assignment.progress com TrackItemCompletion (útil após seed/testes/SQL).
    */
-  @Patch(':id/progress')
+  @Post(':id/rebuild-progress')
   @UseGuards(OperationalStateGuard)
-  async updateProgress(
-    @Param('id') id: string,
-    @Body() body: { progress: number },
-  ) {
-    return this.service.updateProgress(id, body.progress)
+  async rebuildProgress(@Param('id') assignmentId: string) {
+    return this.service.rebuildProgress(assignmentId)
   }
 }
